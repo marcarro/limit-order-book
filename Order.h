@@ -18,6 +18,7 @@ class Order {
   buy_or_sell side;
   std::time_t timestamp;
 public:
+  
   // Getters
   std::string get_client();
   double get_price();
@@ -25,6 +26,7 @@ public:
   int get_volume();
   buy_or_sell get_side();
   std::time_t get_timestamp();
+  
   // Setters
   void set_client(std::string new_client);
   void set_price(double new_price);
