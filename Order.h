@@ -19,6 +19,10 @@ class Order {
   std::time_t timestamp;
 public:
 
+  // Constructors
+  Order();
+  Order(std::string _client, double _price, int _order_id, int _volume, buy_or_sell _side, std::time_t _timestamp);
+
   // Operator overload for min and max heap
   friend bool operator<(const Order& a, const Order& b);
   friend bool operator>(const Order& a, const Order& b);

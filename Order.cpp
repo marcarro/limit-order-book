@@ -1,5 +1,24 @@
 #include "Order.h"
 
+// Constructors
+Order::Order(): 
+client{},
+price{0.0},
+order_id{0},
+volume{0},
+side{buy},
+timestamp{}
+{}
+
+Order::Order(std::string _client, double _price, int _order_id, int _volume, buy_or_sell _side, std::time_t _timestamp):
+client{_client},
+price{_price},
+order_id{_order_id},
+volume{_volume},
+side{_side},
+timestamp{_timestamp}
+{}
+
 // Operator overload for min and max heap
 bool operator<(const Order& a, const Order& b) {
   return a.price < b.price;
