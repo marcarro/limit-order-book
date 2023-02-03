@@ -1,5 +1,13 @@
 #include "Order.h"
 
+// Operator overload for min and max heap
+bool operator<(const Order& a, const Order& b) {
+  return a.price < b.price;
+}
+bool operator>(const Order& a, const Order& b) {
+  return b < a;
+}
+
 // Getters
 std::string Order::get_client() { return client; }
 double Order::get_price() { return price; }

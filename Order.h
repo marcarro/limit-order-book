@@ -18,6 +18,10 @@ class Order {
   buy_or_sell side;
   std::time_t timestamp;
 public:
+
+  // Operator overload for min and max heap
+  friend bool operator<(const Order& a, const Order& b);
+  friend bool operator>(const Order& a, const Order& b);
   
   // Getters
   std::string get_client();
@@ -35,5 +39,8 @@ public:
   void set_side(buy_or_sell new_side);
   void set_timestamp(std::time_t new_timestamp);
 };
+
+bool operator<(const Order& a, const Order& b);
+bool operator>(const Order& a, const Order& b);
 
 #endif
