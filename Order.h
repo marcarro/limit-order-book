@@ -11,6 +11,7 @@ enum buy_or_sell {
 };
 
 class Order {
+private:
   std::string client;
   double price;
   int order_id;
