@@ -4,12 +4,13 @@
 
 #include <queue>
 #include <unordered_map>
+#include <map>
 
 #include "Order.h"
 
 class Orderbook {
-  std::priority_queue<std::queue<Order>> bid; // Max heap
-  std::priority_queue<std::queue<Order>, std::vector<std::queue<Order>>, std::greater<std::queue<Order>>> ask; // Min heap
+  std::map<double, std::queue<Order>> bids; // Acts as max heap through std::map::rbegin
+  std::map<double, std::queue<Order>> asks; // Acts as min heap through std::map::begin
   std::unordered_map<double, int> volume_at_price; // format: {price, volume}
 };
 
