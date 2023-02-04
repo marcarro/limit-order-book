@@ -1,7 +1,6 @@
 #include "Order.h"
 
 // Constructors
-// Default ctr
 Order::Order(): 
 client{},
 price{0.0},
