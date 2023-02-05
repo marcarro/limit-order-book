@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <utility>
+#include <functional>
 #include <unordered_map>
 
 #include "Order.h"
@@ -12,10 +13,10 @@
 class Orderbook {
 public:
   // Acts as max heap through std::map::begin
-  std::map<double, std::list<Order>, std::greater<int>> bids; 
+  std::map<double, std::list<std::reference_wrapper<Order>>, std::greater<int>> bids; 
 
   // Acts as min heap through std::map::begin
-  std::map<double, std::list<Order>> asks; 
+  std::map<double, std::list<std::reference_wrapper<Order>>> asks; 
 
   // format: {price, volume}
   std::unordered_map<double, int> bid_volume_at_price;
