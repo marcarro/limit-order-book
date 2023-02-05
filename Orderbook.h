@@ -11,7 +11,7 @@
 #include "Order.h"
 
 class Orderbook {
-public:
+private:
   // Acts as max heap through std::map::begin
   std::map<double, std::list<std::reference_wrapper<Order>>, std::greater<int>> bids; 
 

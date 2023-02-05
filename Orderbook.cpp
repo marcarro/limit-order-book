@@ -20,7 +20,7 @@ void Orderbook::place_order(Order order_to_place) {
       order_to_place.get_client() << ", " << trade_volume << " shares @ "
       << trade_price << std::endl;
 
-      if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
+      if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());
     }
     if (order_to_place.get_volume() > 0) add_order(order_to_place);
   } else {
@@ -38,7 +38,7 @@ void Orderbook::place_order(Order order_to_place) {
       order_to_place.get_client() << ", " << trade_volume << " shares @ "
       << trade_price << std::endl;
 
-      if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
+      if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());
     }
     if (order_to_place.get_volume() > 0) add_order(order_to_place);
   }
