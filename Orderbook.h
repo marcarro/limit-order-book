@@ -10,7 +10,7 @@
 #include "Order.h"
 
 class Orderbook {
-private:
+public:
   // Acts as max heap through std::map::begin
   std::map<double, std::list<Order>, std::greater<int>> bids; 
 

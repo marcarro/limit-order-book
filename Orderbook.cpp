@@ -9,6 +9,8 @@ void Orderbook::place_order(Order order_to_place) {
   if (order_to_place.get_side() == buy) {
     while (order_to_place.get_volume() > 0 && !asks.empty() && asks.begin()->second.front().get_price() <= order_to_place.get_price()) {
       Order other_order = asks.begin()->second.front();
+
+      std::cout << "other order addr: " << &other_order << std::endl;
       
       double trade_price = other_order.get_price();
       int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
@@ -16,8 +18,8 @@ void Orderbook::place_order(Order order_to_place) {
       other_order.set_volume(other_order.get_volume() - trade_volume);
       order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
 
-      std::cout << "Order by " << other_order.get_client() << "taken by" << 
-      order_to_place.get_client() << ", " << trade_volume << "shares @"
+      std::cout << other_order.get_client() << " --> " << 
+      order_to_place.get_client() << ", " << trade_volume << " shares @ "
       << trade_price << std::endl;
 
       if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());
@@ -33,8 +35,8 @@ void Orderbook::place_order(Order order_to_place) {
       other_order.set_volume(other_order.get_volume() - trade_volume);
       order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
 
-      std::cout << "Order by " << other_order.get_client() << "taken by" << 
-      order_to_place.get_client() << ", " << trade_volume << "shares @"
+      std::cout << other_order.get_client() << " --> " << 
+      order_to_place.get_client() << ", " << trade_volume << " shares @ "
       << trade_price << std::endl;
 
       if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());

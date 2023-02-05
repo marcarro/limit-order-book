@@ -36,7 +36,6 @@ buy_or_sell Order::get_side() { return side; }
 std::time_t Order::get_timestamp() { return timestamp; }
 
 // Setters
-
 void Order::set_client(std::string new_client) { client = new_client; }
 void Order::set_price(double new_price) { price = new_price; }
 void Order::set_order_id(int new_order_id) { order_id = new_order_id; }
