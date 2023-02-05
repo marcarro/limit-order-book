@@ -19,17 +19,18 @@ private:
   std::map<double, std::list<std::reference_wrapper<Order>>> asks; 
 
   // format: {price, volume}
-  std::unordered_map<double, int> bid_volume_at_price;
-  std::unordered_map<double, int> ask_volume_at_price;
+  std::map<double, int> bid_volume_at_price;
+  std::map<double, int> ask_volume_at_price;
 
-  // format: {order_id, {side, price}} "side = map, price = key"
-  std::unordered_map<int, std::pair<buy_or_sell, double>> order_location;
+  // format: {order_id, order} "side = map, price = key"
+  std::unordered_map<int, Order> order_location;
 
   void add_order(Order order_to_add);
 public:
   void place_order(Order order_to_place);
   void cancel_order(int order_id);
   int get_volume_at_price(double price, buy_or_sell side);
+  void view();
 };
 
 #endif
