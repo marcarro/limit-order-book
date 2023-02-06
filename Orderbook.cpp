@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <stdlib.h>
+#include <memory>
 
 #include "Orderbook.h"
 

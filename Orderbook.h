@@ -27,6 +27,7 @@ public:
   void add_order(Order order_to_add);
 public:
   void place_order(Order order_to_place);
+  template <typename T> void place_order2(Order order_to_place);
   void cancel_order(int order_id);
   int get_volume_at_price(double price, buy_or_sell side);
   void view();
