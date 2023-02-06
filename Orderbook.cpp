@@ -14,7 +14,7 @@ void Orderbook::place_order(Order order_to_place) {
       double trade_price = other_order.get_price();
       int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
       
-      ask_volume_at_price[other_order.get_price()] = other_order.get_volume() - trade_volume;
+      ask_volume_at_price[trade_price] = other_order.get_volume() - trade_volume;
       other_order.set_volume(other_order.get_volume() - trade_volume);
       order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
 
@@ -22,7 +22,7 @@ void Orderbook::place_order(Order order_to_place) {
       order_to_place.get_client() << ", " << trade_volume << " shares @ "
       << trade_price << "\n";
 
-      if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());
+      if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
     }
     if (order_to_place.get_volume() > 0) add_order(order_to_place);
   } else {
@@ -32,7 +32,7 @@ void Orderbook::place_order(Order order_to_place) {
       double trade_price = other_order.get_price();
       int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
 
-      bid_volume_at_price[other_order.get_price()] = other_order.get_volume() - trade_volume;
+      bid_volume_at_price[trade_price] = other_order.get_volume() - trade_volume;
       other_order.set_volume(other_order.get_volume() - trade_volume);
       order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
 
@@ -40,7 +40,7 @@ void Orderbook::place_order(Order order_to_place) {
       order_to_place.get_client() << ", " << trade_volume << " shares @ "
       << trade_price << "\n";
 
-      if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());
+      if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
     }
     if (order_to_place.get_volume() > 0) add_order(order_to_place);
   }
@@ -70,7 +70,7 @@ void Orderbook::cancel_order(int order_id) {
     }
     if (bids[key].empty()) bids.erase(key);
     bid_volume_at_price[key] -= volume;
-    if (bid_volume_at_price[key] == 0) bid_volume_at_price.erase(key);
+    if (bid_volume_at_price[key] <= 0) bid_volume_at_price.erase(key);
   } else {
     for (auto it = asks[key].begin(); it != asks[key].end();) {
       if (it->get_order_id() == order_id)
@@ -80,7 +80,7 @@ void Orderbook::cancel_order(int order_id) {
     }
     if (asks[key].empty()) asks.erase(key);
     ask_volume_at_price[key] -= volume;
-    if (ask_volume_at_price[key] == 0) ask_volume_at_price.erase(key);
+    if (ask_volume_at_price[key] <= 0) ask_volume_at_price.erase(key);
   }
   order_location.erase(order_id);
 }
