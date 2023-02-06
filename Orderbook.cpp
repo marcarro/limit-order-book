@@ -14,12 +14,13 @@ void Orderbook::place_order(Order order_to_place) {
       double trade_price = other_order.get_price();
       int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
       
+      ask_volume_at_price[other_order.get_price()] = other_order.get_volume() - trade_volume;
       other_order.set_volume(other_order.get_volume() - trade_volume);
       order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
 
       std::cout << other_order.get_client() << " --> " << 
       order_to_place.get_client() << ", " << trade_volume << " shares @ "
-      << trade_price << std::endl;
+      << trade_price << "\n";
 
       if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());
     }
@@ -31,12 +32,13 @@ void Orderbook::place_order(Order order_to_place) {
       double trade_price = other_order.get_price();
       int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
 
+      bid_volume_at_price[other_order.get_price()] = other_order.get_volume() - trade_volume;
       other_order.set_volume(other_order.get_volume() - trade_volume);
       order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
 
       std::cout << other_order.get_client() << " <-- " << 
       order_to_place.get_client() << ", " << trade_volume << " shares @ "
-      << trade_price << std::endl;
+      << trade_price << "\n";
 
       if (other_order.get_volume() == 0) cancel_order(other_order.get_order_id());
     }
@@ -90,13 +92,13 @@ int Orderbook::get_volume_at_price(double price, buy_or_sell side) {
 
 void Orderbook::view() {
   using namespace std;
-  cout << "ASK\t Volume\t Price" << endl;
+  cout << "ASK\t Volume\t Price" << "\n";
   for (auto it = ask_volume_at_price.rbegin(); it != ask_volume_at_price.rend(); ++it) 
-    cout << "\t " << it->second << "\t " << "\033[31m" << it->first << "\033[0m" << endl;
+    cout << "\t " << it->second << "\t " << "\033[31m" << it->first << "\033[0m" << "\n";
 
-  cout << "BID\t Volume\t Price" << endl;
+  cout << "BID\t Volume\t Price" << "\n";
   for (auto it = bid_volume_at_price.rbegin(); it != bid_volume_at_price.rend(); ++it)
-    cout << "\t " << it->second << "\t " << "\033[32m" << it->first << "\033[0m" << endl;
+    cout << "\t " << it->second << "\t " << "\033[32m" << it->first << "\033[0m" << "\n";
   
-  cout << endl;
+  cout << "\n";
 }
