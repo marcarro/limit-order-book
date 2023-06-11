@@ -29,12 +29,12 @@ public:
   friend bool operator>(const Order& a, const Order& b);
   
   // Getters
-  std::string get_client();
-  double get_price();
-  int get_order_id();
-  int get_volume();
-  buy_or_sell get_side();
-  std::time_t get_timestamp();
+  std::string get_client() const;
+  double get_price() const;
+  int get_order_id() const;
+  int get_volume() const;
+  buy_or_sell get_side() const;
+  std::time_t get_timestamp() const;
   
   // Setters
   void set_client(std::string new_client);

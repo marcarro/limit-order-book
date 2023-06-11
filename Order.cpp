@@ -28,12 +28,12 @@ bool operator>(const Order& a, const Order& b) {
 }
 
 // Getters
-std::string Order::get_client() { return client; }
-double Order::get_price() { return price; }
-int Order::get_order_id() { return order_id; }
-int Order::get_volume() { return volume; }
-buy_or_sell Order::get_side() { return side; }
-std::time_t Order::get_timestamp() { return timestamp; }
+std::string Order::get_client() const { return client; }
+double Order::get_price() const { return price; }
+int Order::get_order_id() const { return order_id; }
+int Order::get_volume() const { return volume; }
+buy_or_sell Order::get_side() const { return side; }
+std::time_t Order::get_timestamp() const { return timestamp; }
 
 // Setters
 void Order::set_client(std::string new_client) { client = new_client; }

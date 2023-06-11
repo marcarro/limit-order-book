@@ -5,45 +5,42 @@
 
 #include "Orderbook.h"
 
+template <typename Compare>
+void Orderbook::process_order(Order& order_to_place, std::map<double, std::list<Order>, Compare>& book, std::map<double, int>& volume_at_price, const std::function<bool(double, double)>& compare) {
+  while (order_to_place.get_volume() > 0 && !book.empty() && compare(book.begin()->first, order_to_place.get_price())) {
+    Order& other_order = book.begin()->second.front();
+
+    int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
+
+    volume_at_price[other_order.get_price()] = other_order.get_volume() - trade_volume;
+    update_order_volume(other_order, trade_volume);
+    update_order_volume(order_to_place, trade_volume);
+
+    print_trade_information(other_order, order_to_place, trade_volume);
+
+    if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
+  }
+}
+
+void Orderbook::update_order_volume(Order& order, int trade_volume) {
+  order.set_volume(order.get_volume() - trade_volume);
+}
+
+void Orderbook::print_trade_information(const Order& other_order, const Order& order_to_place, int trade_volume) {
+  std::cout << other_order.get_client() << " " <<
+  (order_to_place.get_side() == buy ? " --> " : " <-- ") <<
+  order_to_place.get_client() << ", " << trade_volume << " shares @ "
+  << other_order.get_price() << "\n";
+}
+
 void Orderbook::place_order(Order order_to_place) {
   order_location[order_to_place.get_order_id()] = order_to_place;
   if (order_to_place.get_side() == buy) {
-    while (order_to_place.get_volume() > 0 && !asks.empty() && asks.begin()->first <= order_to_place.get_price()) {
-      Order& other_order = asks.begin()->second.front();
-      
-      double trade_price = other_order.get_price();
-      int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
-      
-      ask_volume_at_price[trade_price] = other_order.get_volume() - trade_volume;
-      other_order.set_volume(other_order.get_volume() - trade_volume);
-      order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
-
-      std::cout << other_order.get_client() << " --> " << 
-      order_to_place.get_client() << ", " << trade_volume << " shares @ "
-      << trade_price << "\n";
-
-      if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
-    }
-    if (order_to_place.get_volume() > 0) add_order(order_to_place);
+    process_order(order_to_place, asks, ask_volume_at_price, std::less_equal<double>());
   } else {
-    while (order_to_place.get_volume() > 0 && !bids.empty() && bids.begin()->first >= order_to_place.get_price()) {
-      Order& other_order = bids.begin()->second.front();
-
-      double trade_price = other_order.get_price();
-      int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
-
-      bid_volume_at_price[trade_price] = other_order.get_volume() - trade_volume;
-      other_order.set_volume(other_order.get_volume() - trade_volume);
-      order_to_place.set_volume(order_to_place.get_volume() - trade_volume);
-
-      std::cout << other_order.get_client() << " <-- " << 
-      order_to_place.get_client() << ", " << trade_volume << " shares @ "
-      << trade_price << "\n";
-
-      if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
-    }
-    if (order_to_place.get_volume() > 0) add_order(order_to_place);
+    process_order(order_to_place, bids, bid_volume_at_price, std::greater_equal<double>());
   }
+  if (order_to_place.get_volume() > 0) add_order(order_to_place);
 }
 
 void Orderbook::add_order(Order order_to_place) {
