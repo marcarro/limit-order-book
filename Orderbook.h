@@ -9,10 +9,19 @@
 
 #include "Order.h"
 
+enum class BookSide { Bid, Ask };
+
+template <typename PriceComparator>
+struct BookView {
+	std::map<double, std::list<Order>, PriceComparator>& book;
+	std::map<double, int>& volume_tracker;
+	std::function<bool(double, double)> price_matches_condition;
+};
+
 class Orderbook {
 private:
   // Acts as max heap through std::map::begin
-  std::map<double, std::list<Order>, std::greater<int>> bids; 
+  std::map<double, std::list<Order>, std::greater<double>> bids; 
 
   // Acts as min heap through std::map::begin
   std::map<double, std::list<Order>> asks; 
@@ -27,13 +36,18 @@ private:
   void add_order(Order order_to_add);
   void update_order_volume(Order& order, int trade_volume);
   void print_trade_information(const Order& other_order, const Order& order_to_place, int trade_volume);
-  template <typename Compare>
-  void process_order(Order& order_to_place, std::map<double, std::list<Order>, Compare>& book, std::map<double, int>& volume_at_price, const std::function<bool(double, double)>& compare);
+
+  template <typename PriceComparator>
+  void process_order(
+	Order& order_to_place,
+	const BookView<PriceComparator>& opposite_side_view
+  );
 public:
   void place_order(Order order_to_place);
   void cancel_order(int order_id);
   int get_volume_at_price(double price, buy_or_sell side);
   void view();
 };
+
 
 #endif

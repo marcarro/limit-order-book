@@ -1,0 +1,491 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+
+Additional Info:
+----------------
+
+================================================================
+Directory Structure
+================================================================
+.gitignore
+Benchmark.h
+main.cpp
+Order.cpp
+Order.h
+Orderbook.cpp
+Orderbook.h
+README.md
+
+================================================================
+Files
+================================================================
+
+================
+File: .gitignore
+================
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Directories
+.vscode/
+
+================
+File: Benchmark.h
+================
+#ifndef BENCHMARK_H
+#define BENCHMARK_H
+
+#include <chrono>
+#include <iostream>
+
+class Benchmark {
+private:
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_point;
+public:
+  Benchmark(): start_point(std::chrono::high_resolution_clock::now()) {}
+  ~Benchmark() { Stop(); }
+  void Stop() {
+    auto endtimepoint = std::chrono::high_resolution_clock::now();
+
+    auto start = std::chrono::time_point_cast<std::chrono::nanoseconds>(start_point).time_since_epoch().count();
+    auto end = std::chrono::time_point_cast<std::chrono::nanoseconds>(endtimepoint).time_since_epoch().count();
+    
+    auto duration = end - start;
+    double us = duration * 0.001;
+    double ms = us * 0.001;
+    
+    std::cout << duration << " ns (" << us << " us) - (" << ms << " ms)\n";
+  }
+};
+
+#endif
+
+================
+File: main.cpp
+================
+#include <iostream>
+
+#include "Orderbook.h"
+#include "Benchmark.h"
+
+int main() {
+  Orderbook ordbook;
+  
+  {
+    Benchmark benchmark;
+    Order ord1("Alex G", 100, 1, 30, sell, time(0));
+    ordbook.place_order(ord1);
+  }
+
+  {
+    Benchmark benchmark;
+    Order ord2("John M", 101, 2, 30, sell, time(0));
+    ordbook.place_order(ord2);
+  }
+
+  {
+    Benchmark benchmark;
+    Order ord3("Jake T", 99, 3, 30, buy, time(0));
+    ordbook.place_order(ord3);
+  }
+    
+  {
+    Benchmark benchmark;
+    Order ord4("James B", 99, 4, 30, buy, time(0));
+    ordbook.place_order(ord4);
+  }
+  
+  {
+    Benchmark benchmark;
+    Order ord5("Market Maker", 102, 5, 32, buy, time(0));
+    ordbook.place_order(ord5);
+  }
+
+  return 0;
+}
+
+================
+File: Order.cpp
+================
+#include "Order.h"
+
+// Constructors
+Order::Order(): 
+client{},
+price{0.0},
+order_id{0},
+volume{0},
+side{buy},
+timestamp{}
+{}
+
+Order::Order(std::string _client, double _price, int _order_id, int _volume, buy_or_sell _side, std::time_t _timestamp):
+client{_client},
+price{_price},
+order_id{_order_id},
+volume{_volume},
+side{_side},
+timestamp{_timestamp}
+{}
+
+// Operator overload for min and max heap
+bool operator<(const Order& a, const Order& b) {
+  return a.price < b.price;
+}
+bool operator>(const Order& a, const Order& b) {
+  return b < a;
+}
+
+// Getters
+std::string Order::get_client() const { return client; }
+double Order::get_price() const { return price; }
+int Order::get_order_id() const { return order_id; }
+int Order::get_volume() const { return volume; }
+buy_or_sell Order::get_side() const { return side; }
+std::time_t Order::get_timestamp() const { return timestamp; }
+
+// Setters
+void Order::set_client(std::string new_client) { client = new_client; }
+void Order::set_price(double new_price) { price = new_price; }
+void Order::set_order_id(int new_order_id) { order_id = new_order_id; }
+void Order::set_volume(int new_volume) { volume = new_volume; }
+void Order::set_side(buy_or_sell new_side) { side = new_side; }
+void Order::set_timestamp(std::time_t new_timestamp) { timestamp = new_timestamp; }
+
+================
+File: Order.h
+================
+#ifndef ORDER_H
+#define ORDER_H
+#pragma once
+
+#include <ctime>
+#include <string>
+
+enum buy_or_sell {
+  buy,
+  sell
+};
+
+class Order {
+private:
+  std::string client;
+  double price;
+  int order_id;
+  int volume;
+  buy_or_sell side;
+  std::time_t timestamp;
+public:
+
+  // Constructors
+  Order();
+  Order(std::string _client, double _price, int _order_id, int _volume, buy_or_sell _side, std::time_t _timestamp);
+
+  // Operator overload for min and max heap
+  friend bool operator<(const Order& a, const Order& b);
+  friend bool operator>(const Order& a, const Order& b);
+  
+  // Getters
+  std::string get_client() const;
+  double get_price() const;
+  int get_order_id() const;
+  int get_volume() const;
+  buy_or_sell get_side() const;
+  std::time_t get_timestamp() const;
+  
+  // Setters
+  void set_client(std::string new_client);
+  void set_price(double new_price);
+  void set_order_id(int new_order_id);
+  void set_volume(int new_volume);
+  void set_side(buy_or_sell new_side);
+  void set_timestamp(std::time_t new_timestamp);
+};
+
+bool operator<(const Order& a, const Order& b);
+bool operator>(const Order& a, const Order& b);
+
+#endif
+
+================
+File: Orderbook.cpp
+================
+#include <iostream>
+#include <stdlib.h>
+
+#include "Orderbook.h"
+
+template <typename PriceComparator>
+void Orderbook::process_order(
+	Order& order_to_place, 
+	const BookView<PriceComparator>& opposite_side_view
+) {
+    auto& opposite_side_book = opposite_side_view.book;
+	auto& opposite_volume_tracker = opposite_side_view.volume_tracker;
+	auto& price_matches_condition = opposite_side_view.price_matches_condition;
+
+  while (order_to_place.get_volume() > 0 && !opposite_side_book.empty()) {
+    if (!price_matches_condition(opposite_side_book.begin()->first, order_to_place.get_price())) 
+		break;
+
+    Order& matching_order = opposite_side_book.begin()->second.front();
+    int trade_volume = std::min(order_to_place.get_volume(), matching_order.get_volume());
+
+    opposite_volume_tracker[matching_order.get_price()] -= trade_volume;
+
+    update_order_volume(matching_order, trade_volume);
+    update_order_volume(order_to_place, trade_volume);
+
+    print_trade_information(matching_order, order_to_place, trade_volume);
+
+    if (matching_order.get_volume() <= 0) {
+      int order_id = matching_order.get_order_id();
+	  order_location.erase(order_id);
+      opposite_side_book.begin()->second.pop_front();
+
+      if (opposite_side_book.begin()->second.empty())
+	    opposite_side_book.erase(opposite_side_book.begin());
+    }
+  }
+}
+
+
+void Orderbook::update_order_volume(Order& order, int trade_volume) {
+  order.set_volume(order.get_volume() - trade_volume);
+}
+
+void Orderbook::print_trade_information(const Order& other_order, const Order& order_to_place, int trade_volume) {
+  std::cout << other_order.get_client() << " " <<
+  (order_to_place.get_side() == buy ? " --> " : " <-- ") <<
+  order_to_place.get_client() << ", " << trade_volume << " shares @ "
+  << other_order.get_price() << "\n";
+}
+
+void Orderbook::place_order(Order order_to_place) {
+  order_location[order_to_place.get_order_id()] = order_to_place;
+
+  if (order_to_place.get_side() == buy) {
+	BookView<std::less<double>> ask_view = {
+		asks,
+		ask_volume_at_price,
+		std::less_equal<double>()
+	};
+    process_order(order_to_place, ask_view);
+  } else {
+	BookView<std::greater<double>> bid_view = {
+		bids,
+		bid_volume_at_price,
+		std::greater_equal<double>()
+	};
+    process_order(order_to_place, bid_view);
+  }
+
+  if (order_to_place.get_volume() > 0)
+	  add_order(order_to_place);
+}
+
+void Orderbook::add_order(Order order_to_place) {
+  double price = order_to_place.get_price();
+  int volume = order_to_place.get_volume();
+
+  if (order_to_place.get_side() == buy){
+	bid_volume_at_price[price] += volume;
+    bids[price].push_back(order_to_place);
+  } else {
+    ask_volume_at_price[price] += volume;
+    asks[price].push_back(order_to_place);
+  }
+}
+
+void Orderbook::cancel_order(int order_id) {
+  auto order_it = order_location.find(order_id);
+  if (order_it == order_location.end()) return;
+
+  Order& order = order_it->second;
+  buy_or_sell side = order.get_side();
+  double price = order.get_price();
+  int volume = order.get_volume();
+
+  if (side == buy) {
+    bid_volume_at_price[price] -= volume;
+    if (bid_volume_at_price[price] <= 0) bid_volume_at_price.erase(price);
+    
+    auto& orders_at_price = bids[price];
+    orders_at_price.remove_if([order_id](const Order& o) { return o.get_order_id() == order_id; });
+    if (orders_at_price.empty()) bids.erase(price);
+  } else {
+    ask_volume_at_price[price] -= volume;
+    if (ask_volume_at_price[price] <= 0) ask_volume_at_price.erase(price);
+    
+    auto& orders_at_price = asks[price];
+    orders_at_price.remove_if([order_id](const Order& o) { return o.get_order_id() == order_id; });
+    if (orders_at_price.empty()) asks.erase(price);
+  }
+
+  order_location.erase(order_id);
+}
+
+int Orderbook::get_volume_at_price(double price, buy_or_sell side) {
+  if (side == buy) return bid_volume_at_price[price];
+  else return ask_volume_at_price[price];
+}
+
+void Orderbook::view() {
+  using namespace std;
+  cout << "ASK\t Volume\t Price" << "\n";
+  for (auto it = ask_volume_at_price.rbegin(); it != ask_volume_at_price.rend(); ++it) 
+    cout << "\t " << it->second << "\t " << "\033[31m" << it->first << "\033[0m" << "\n";
+
+  cout << "BID\t Volume\t Price" << "\n";
+  for (auto it = bid_volume_at_price.rbegin(); it != bid_volume_at_price.rend(); ++it)
+    cout << "\t " << it->second << "\t " << "\033[32m" << it->first << "\033[0m" << "\n";
+  
+  cout << "\n";
+}
+
+template void Orderbook::process_order<std::less<double>>(
+    Order&, const BookView<std::less<double>>&
+);
+
+template void Orderbook::process_order<std::greater<double>>(
+    Order&, const BookView<std::greater<double>>&
+);
+
+================
+File: Orderbook.h
+================
+#ifndef ORDERBOOK_H
+#define ORDERBOOK_H
+#pragma once
+
+#include <list>
+#include <map>
+#include <utility>
+#include <unordered_map>
+
+#include "Order.h"
+
+enum class BookSide { Bid, Ask };
+
+template <typename PriceComparator>
+struct BookView {
+	std::map<double, std::list<Order>, PriceComparator>& book;
+	std::map<double, int>& volume_tracker;
+	std::function<bool(double, double)> price_matches_condition;
+};
+
+class Orderbook {
+private:
+  // Acts as max heap through std::map::begin
+  std::map<double, std::list<Order>, std::greater<double>> bids; 
+
+  // Acts as min heap through std::map::begin
+  std::map<double, std::list<Order>> asks; 
+
+  // format: {price, volume}
+  std::map<double, int> bid_volume_at_price;
+  std::map<double, int> ask_volume_at_price;
+
+  // format: {order_id, order} "side = map, price = key"
+  std::unordered_map<int, Order> order_location;
+
+  void add_order(Order order_to_add);
+  void update_order_volume(Order& order, int trade_volume);
+  void print_trade_information(const Order& other_order, const Order& order_to_place, int trade_volume);
+
+  template <typename PriceComparator>
+  void process_order(
+	Order& order_to_place,
+	const BookView<PriceComparator>& opposite_side_view
+  );
+public:
+  void place_order(Order order_to_place);
+  void cancel_order(int order_id);
+  int get_volume_at_price(double price, buy_or_sell side);
+  void view();
+};
+
+
+#endif
+
+================
+File: README.md
+================
+# limit-order-book
+Limit order book and trading engine
+
+## Todo
+
+
+
+================================================================
+End of Codebase
+================================================================

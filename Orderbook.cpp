@@ -1,26 +1,42 @@
 #include <iostream>
-#include <algorithm>
 #include <stdlib.h>
-#include <memory>
 
 #include "Orderbook.h"
 
-template <typename Compare>
-void Orderbook::process_order(Order& order_to_place, std::map<double, std::list<Order>, Compare>& book, std::map<double, int>& volume_at_price, const std::function<bool(double, double)>& compare) {
-  while (order_to_place.get_volume() > 0 && !book.empty() && compare(book.begin()->first, order_to_place.get_price())) {
-    Order& other_order = book.begin()->second.front();
+template <typename PriceComparator>
+void Orderbook::process_order(
+	Order& order_to_place, 
+	const BookView<PriceComparator>& opposite_side_view
+) {
+    auto& opposite_side_book = opposite_side_view.book;
+	auto& opposite_volume_tracker = opposite_side_view.volume_tracker;
+	auto& price_matches_condition = opposite_side_view.price_matches_condition;
 
-    int trade_volume = std::min(order_to_place.get_volume(), other_order.get_volume());
+  while (order_to_place.get_volume() > 0 && !opposite_side_book.empty()) {
+    if (!price_matches_condition(opposite_side_book.begin()->first, order_to_place.get_price())) 
+		break;
 
-    volume_at_price[other_order.get_price()] = other_order.get_volume() - trade_volume;
-    update_order_volume(other_order, trade_volume);
+    Order& matching_order = opposite_side_book.begin()->second.front();
+    int trade_volume = std::min(order_to_place.get_volume(), matching_order.get_volume());
+
+    opposite_volume_tracker[matching_order.get_price()] -= trade_volume;
+
+    update_order_volume(matching_order, trade_volume);
     update_order_volume(order_to_place, trade_volume);
 
-    print_trade_information(other_order, order_to_place, trade_volume);
+    print_trade_information(matching_order, order_to_place, trade_volume);
 
-    if (other_order.get_volume() <= 0) cancel_order(other_order.get_order_id());
+    if (matching_order.get_volume() <= 0) {
+      int order_id = matching_order.get_order_id();
+	  order_location.erase(order_id);
+      opposite_side_book.begin()->second.pop_front();
+
+      if (opposite_side_book.begin()->second.empty())
+	    opposite_side_book.erase(opposite_side_book.begin());
+    }
   }
 }
+
 
 void Orderbook::update_order_volume(Order& order, int trade_volume) {
   order.set_volume(order.get_volume() - trade_volume);
@@ -35,50 +51,65 @@ void Orderbook::print_trade_information(const Order& other_order, const Order& o
 
 void Orderbook::place_order(Order order_to_place) {
   order_location[order_to_place.get_order_id()] = order_to_place;
+
   if (order_to_place.get_side() == buy) {
-    process_order(order_to_place, asks, ask_volume_at_price, std::less_equal<double>());
+	BookView<std::less<double>> ask_view = {
+		asks,
+		ask_volume_at_price,
+		std::less_equal<double>()
+	};
+    process_order(order_to_place, ask_view);
   } else {
-    process_order(order_to_place, bids, bid_volume_at_price, std::greater_equal<double>());
+	BookView<std::greater<double>> bid_view = {
+		bids,
+		bid_volume_at_price,
+		std::greater_equal<double>()
+	};
+    process_order(order_to_place, bid_view);
   }
-  if (order_to_place.get_volume() > 0) add_order(order_to_place);
+
+  if (order_to_place.get_volume() > 0)
+	  add_order(order_to_place);
 }
 
 void Orderbook::add_order(Order order_to_place) {
+  double price = order_to_place.get_price();
+  int volume = order_to_place.get_volume();
+
   if (order_to_place.get_side() == buy){
-    bids[order_to_place.get_price()].push_back(order_to_place);
-    bid_volume_at_price[order_to_place.get_price()] += order_to_place.get_volume();
+	bid_volume_at_price[price] += volume;
+    bids[price].push_back(order_to_place);
   } else {
-    asks[order_to_place.get_price()].push_back(order_to_place);
-    ask_volume_at_price[order_to_place.get_price()] += order_to_place.get_volume();
+    ask_volume_at_price[price] += volume;
+    asks[price].push_back(order_to_place);
   }
 }
 
 void Orderbook::cancel_order(int order_id) {
-  if (order_location.find(order_id) == order_location.end()) return;
-  buy_or_sell side = order_location[order_id].get_side();
-  double key = order_location[order_id].get_price();
-  int volume = order_location[order_id].get_volume();
+  auto order_it = order_location.find(order_id);
+  if (order_it == order_location.end()) return;
+
+  Order& order = order_it->second;
+  buy_or_sell side = order.get_side();
+  double price = order.get_price();
+  int volume = order.get_volume();
+
   if (side == buy) {
-    for (auto it = bids[key].begin(); it != bids[key].end();) {
-      if (it->get_order_id() == order_id)
-        it = bids[key].erase(it);
-      else
-        ++it;
-    }
-    if (bids[key].empty()) bids.erase(key);
-    bid_volume_at_price[key] -= volume;
-    if (bid_volume_at_price[key] <= 0) bid_volume_at_price.erase(key);
+    bid_volume_at_price[price] -= volume;
+    if (bid_volume_at_price[price] <= 0) bid_volume_at_price.erase(price);
+    
+    auto& orders_at_price = bids[price];
+    orders_at_price.remove_if([order_id](const Order& o) { return o.get_order_id() == order_id; });
+    if (orders_at_price.empty()) bids.erase(price);
   } else {
-    for (auto it = asks[key].begin(); it != asks[key].end();) {
-      if (it->get_order_id() == order_id)
-        it = asks[key].erase(it);
-      else
-        ++it;
-    }
-    if (asks[key].empty()) asks.erase(key);
-    ask_volume_at_price[key] -= volume;
-    if (ask_volume_at_price[key] <= 0) ask_volume_at_price.erase(key);
+    ask_volume_at_price[price] -= volume;
+    if (ask_volume_at_price[price] <= 0) ask_volume_at_price.erase(price);
+    
+    auto& orders_at_price = asks[price];
+    orders_at_price.remove_if([order_id](const Order& o) { return o.get_order_id() == order_id; });
+    if (orders_at_price.empty()) asks.erase(price);
   }
+
   order_location.erase(order_id);
 }
 
@@ -99,3 +130,11 @@ void Orderbook::view() {
   
   cout << "\n";
 }
+
+template void Orderbook::process_order<std::less<double>>(
+    Order&, const BookView<std::less<double>>&
+);
+
+template void Orderbook::process_order<std::greater<double>>(
+    Order&, const BookView<std::greater<double>>&
+);
