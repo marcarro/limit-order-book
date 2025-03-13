@@ -2,52 +2,63 @@
 #define ORDERBOOK_H
 #pragma once
 
-#include <list>
-#include <map>
-#include <utility>
-#include <unordered_map>
-
+#include <memory>
+#include <vector>
 #include "Order.h"
 
-enum class BookSide { Bid, Ask };
-
-template <typename PriceComparator>
-struct BookView {
-	std::map<double, std::list<Order>, PriceComparator>& book;
-	std::map<double, int>& volume_tracker;
-	std::function<bool(double, double)> price_matches_condition;
-};
+class OrderbookImpl;
 
 class Orderbook {
-private:
-  // Acts as max heap through std::map::begin
-  std::map<double, std::list<Order>, std::greater<double>> bids; 
-
-  // Acts as min heap through std::map::begin
-  std::map<double, std::list<Order>> asks; 
-
-  // format: {price, volume}
-  std::map<double, int> bid_volume_at_price;
-  std::map<double, int> ask_volume_at_price;
-
-  // format: {order_id, order} "side = map, price = key"
-  std::unordered_map<int, Order> order_location;
-
-  void add_order(Order order_to_add);
-  void update_order_volume(Order& order, int trade_volume);
-  void print_trade_information(const Order& other_order, const Order& order_to_place, int trade_volume);
-
-  template <typename PriceComparator>
-  void process_order(
-	Order& order_to_place,
-	const BookView<PriceComparator>& opposite_side_view
-  );
 public:
-  void place_order(Order order_to_place);
-  void cancel_order(int order_id);
-  int get_volume_at_price(double price, buy_or_sell side);
-  void view();
-};
+	// Result types for operations
+	enum class Result {
+		SUCCESS,
+		PARTIAL_FILL,
+		COMPLETE_FILL,
+		REJECTED,
+		INVALID_ORDER,
+		ORDER_NOT_FOUND,
+		DUPLICATE_ORDER_ID
+	};
 
+	// Trade information returned after placement
+	struct TradeInfo {
+		int order_id;
+		std::string client_name;
+		double price;
+		int volume;
+		bool is_buy;
+		std::string counterparty;
+	};
+
+	// Book level information for market data
+	struct BookLevel {
+		double price;
+		int total_volume;
+		int order_count;
+	};
+  	
+    // Constructor/destructor
+    Orderbook();
+    ~Orderbook();
+    
+    // Core functionality
+    Result place_order(const Order& order, std::vector<TradeInfo>& trades_executed);
+    Result cancel_order(int order_id);
+    Result modify_order(int order_id, double new_price, int new_volume);
+    
+    // Market data access
+    std::vector<BookLevel> get_bid_levels(int depth = 10) const;
+    std::vector<BookLevel> get_ask_levels(int depth = 10) const;
+    double get_mid_price() const;
+    double get_best_bid() const;
+    double get_best_ask() const;
+    int get_volume_at_price(double price, buy_or_sell side) const;
+    
+    // Debug functionality
+    void print_book() const;
+private:
+	std::unique_ptr<OrderbookImpl> impl_;
+};
 
 #endif
