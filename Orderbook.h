@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include "Order.h"
+#include "FixedPoint.h"
 
 class OrderbookImpl;
 
@@ -25,7 +26,7 @@ public:
 	struct TradeInfo {
 		int order_id;
 		std::string client_name;
-		double price;
+		Price price;
 		int volume;
 		bool is_buy;
 		std::string counterparty;
@@ -33,7 +34,7 @@ public:
 
 	// Book level information for market data
 	struct BookLevel {
-		double price;
+		Price price;
 		int total_volume;
 		int order_count;
 	};
@@ -45,15 +46,23 @@ public:
     // Core functionality
     Result place_order(const Order& order, std::vector<TradeInfo>& trades_executed);
     Result cancel_order(int order_id);
-    Result modify_order(int order_id, double new_price, int new_volume);
+    Result modify_order(int order_id, const Price& new_price, int new_volume);
+
+    Result modify_order(int order_id, double new_price, int new_volume) {
+		return modify_order(order_id, Price(new_price), new_volume);
+	}
     
     // Market data access
     std::vector<BookLevel> get_bid_levels(int depth = 10) const;
     std::vector<BookLevel> get_ask_levels(int depth = 10) const;
-    double get_mid_price() const;
-    double get_best_bid() const;
-    double get_best_ask() const;
-    int get_volume_at_price(double price, buy_or_sell side) const;
+    Price get_mid_price() const;
+    Price get_best_bid() const;
+    Price get_best_ask() const;
+    int get_volume_at_price(const Price& price, buy_or_sell side) const;
+
+    int get_volume_at_price(double price, buy_or_sell side) const {
+		return get_volume_at_price(Price(price), side);
+	}
     
     // Debug functionality
     void print_book() const;

@@ -2,6 +2,7 @@
 
 #include "Orderbook.h"
 #include "Benchmark.h"
+#include "FixedPoint.h"
 
 int main() {
   	Orderbook orderbook;
@@ -9,14 +10,14 @@ int main() {
   	
   	{
     	Benchmark benchmark;
-    	Order ord1("Alex G", 100, 1, 30, sell, time(0));
+    	Order ord1("Alex G", Price("100.0000"), 1, 30, sell, time(0));
     	auto result = orderbook.place_order(ord1, trades);
 		std::cout << "Order 1 result: " << static_cast<int>(result) << std::endl;
   	}
 	
   	{
     	Benchmark benchmark;
-    	Order ord2("John M", 101, 2, 30, sell, time(0));
+    	Order ord2("John M", 101.0, 2, 30, sell, time(0));
     	auto result = orderbook.place_order(ord2, trades);
 		std::cout << "Order 1 result: " << static_cast<int>(result) << std::endl;
   	}
@@ -27,6 +28,17 @@ int main() {
     
     // Print book state
     orderbook.print_book();
+
+	// Test fixed-point arithmetic
+    Price price1("100.5000");
+    Price price2("99.7500");
+    Price sum = price1 + price2;
+    Price diff = price1 - price2;
+    
+    std::cout << "Fixed-point tests:" << std::endl;
+    std::cout << price1 << " + " << price2 << " = " << sum << std::endl;
+    std::cout << price1 << " - " << price2 << " = " << diff << std::endl;
+    std::cout << price1 << " / 2 = " << (price1 / 2) << std::endl;
 
   return 0;
 }

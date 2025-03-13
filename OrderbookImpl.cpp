@@ -19,17 +19,17 @@ Orderbook::Result OrderbookImpl::place_order(const Order& order, std::vector<Ord
   	order_location[order.get_order_id()] = order;
 
   	if (order.get_side() == buy) {
-		BookView<std::less<double>> ask_view = {
+		BookView<PriceLess> ask_view = {
 			asks,
 			ask_volume_at_price,
-			std::less_equal<double>()
+			[](const Price& ask_price, const Price& bid_price) { return ask_price <= bid_price; }
 		};
     	process_order(order_copy, ask_view, trades);
   	} else {
-		BookView<std::greater<double>> bid_view = {
+		BookView<PriceGreater> bid_view = {
 			bids,
 			bid_volume_at_price,
-			std::greater_equal<double>()
+			[](const Price& bid_price, const Price& ask_price) { return bid_price >= ask_price; }
 		};
     	process_order(order_copy, bid_view, trades);
   	}
@@ -56,7 +56,7 @@ Orderbook::Result OrderbookImpl::cancel_order(int order_id) {
 	
   	Order& order = order_it->second;
   	buy_or_sell side = order.get_side();
-  	double price = order.get_price();
+  	Price price = order.get_price();
   	int volume = order.get_volume();
 	
   	if (side == buy) {
@@ -89,7 +89,7 @@ Orderbook::Result OrderbookImpl::cancel_order(int order_id) {
   	return Orderbook::Result::SUCCESS;
 }
 
-Orderbook::Result OrderbookImpl::modify_order(int order_id, double new_price, int new_volume) {
+Orderbook::Result OrderbookImpl::modify_order(int order_id, const Price& new_price, int new_volume) {
     // Find the order
     auto order_it = order_location.find(order_id);
     if (order_it == order_location.end()) {
@@ -158,34 +158,34 @@ std::vector<Orderbook::BookLevel> OrderbookImpl::get_ask_levels(int depth) const
     return levels;
 }
 
-double OrderbookImpl::get_mid_price() const {
-    double best_bid = get_best_bid();
-    double best_ask = get_best_ask();
+Price OrderbookImpl::get_mid_price() const {
+    Price best_bid = get_best_bid();
+    Price best_ask = get_best_ask();
     
-    if (best_bid <= 0 || best_ask <= 0) {
-        return 0.0; // No valid mid price
+    if (best_bid.raw_value() <= 0 || best_ask.raw_value() <= 0) {
+        return Price(); // No valid mid price
     }
     
-    return (best_bid + best_ask) / 2.0;
+    return (best_bid + best_ask) / 2;
 }
 
-double OrderbookImpl::get_best_bid() const {
+Price OrderbookImpl::get_best_bid() const {
     if (bids.empty()) {
-        return 0.0; // No bids
+        return Price(); // No bids
     }
     
     return bids.begin()->first;
 }
 
-double OrderbookImpl::get_best_ask() const {
+Price OrderbookImpl::get_best_ask() const {
     if (asks.empty()) {
-        return 0.0; // No asks
+        return Price(); // No asks
     }
     
     return asks.begin()->first;
 }
 
-int OrderbookImpl::get_volume_at_price(double price, buy_or_sell side) const {
+int OrderbookImpl::get_volume_at_price(const Price& price, buy_or_sell side) const {
     if (side == buy) {
         auto it = bid_volume_at_price.find(price);
         return (it != bid_volume_at_price.end()) ? it->second : 0;
@@ -229,7 +229,7 @@ void OrderbookImpl::update_order_volume(Order& order, int trade_volume) {
 }
 
 void OrderbookImpl::add_order(Order order_to_place) {
-  	double price = order_to_place.get_price();
+  	Price price = order_to_place.get_price();
   	int volume = order_to_place.get_volume();
 	
   	if (order_to_place.get_side() == buy){
@@ -291,7 +291,7 @@ bool OrderbookImpl::is_valid_order(const Order& order) const {
     }
     
     // Check for valid price
-    if (order.get_price() <= 0) {
+    if (order.get_price().raw_value() <= 0) {
         return false;
     }
     
@@ -302,10 +302,10 @@ bool OrderbookImpl::has_duplicate_id(const Order& order) const {
     return order_location.find(order.get_order_id()) != order_location.end();
 }
 
-template void OrderbookImpl::process_order<std::less<double>>(
-    Order&, const BookView<std::less<double>>&, std::vector<Orderbook::TradeInfo>&
+template void OrderbookImpl::process_order<PriceLess>(
+    Order&, const BookView<PriceLess>&, std::vector<Orderbook::TradeInfo>&
 );
 
-template void OrderbookImpl::process_order<std::greater<double>>(
-    Order&, const BookView<std::greater<double>>&, std::vector<Orderbook::TradeInfo>&
+template void OrderbookImpl::process_order<PriceGreater>(
+    Order&, const BookView<PriceGreater>&, std::vector<Orderbook::TradeInfo>&
 );

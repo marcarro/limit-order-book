@@ -4,6 +4,7 @@
 
 #include <ctime>
 #include <string>
+#include "FixedPoint.h"
 
 enum buy_or_sell {
   buy,
@@ -13,7 +14,7 @@ enum buy_or_sell {
 class Order {
 private:
   std::string client;
-  double price;
+  Price price;
   int order_id;
   int volume;
   buy_or_sell side;
@@ -22,6 +23,9 @@ public:
 
   // Constructors
   Order();
+  Order(std::string _client, Price _price, int _order_id, int _volume, buy_or_sell _side, std::time_t _timestamp);
+
+  // Compatibility constructor for easier transition (use with caution)
   Order(std::string _client, double _price, int _order_id, int _volume, buy_or_sell _side, std::time_t _timestamp);
 
   // Operator overload for min and max heap
@@ -30,7 +34,7 @@ public:
   
   // Getters
   std::string get_client() const;
-  double get_price() const;
+  Price get_price() const;
   int get_order_id() const;
   int get_volume() const;
   buy_or_sell get_side() const;
@@ -38,7 +42,7 @@ public:
   
   // Setters
   void set_client(std::string new_client);
-  void set_price(double new_price);
+  void set_price(Price new_price);
   void set_order_id(int new_order_id);
   void set_volume(int new_volume);
   void set_side(buy_or_sell new_side);

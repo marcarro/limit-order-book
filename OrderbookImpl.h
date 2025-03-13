@@ -9,32 +9,54 @@
 #include "Order.h"
 #include "Orderbook.h"
 
+// Custom comparators for Price type
+struct PriceGreater {
+    bool operator()(const Price& a, const Price& b) const {
+        return a > b;
+    }
+};
+
+struct PriceLess {
+    bool operator()(const Price& a, const Price& b) const {
+        return a < b;
+    }
+};
+
 template <typename PriceComparator>
 struct BookView {
-	std::map<double, std::list<Order>, PriceComparator>& book;
-	std::map<double, int>& volume_tracker;
-	std::function<bool(double, double)> price_matches_condition;
+	std::map<Price, std::list<Order>, PriceComparator>& book;
+	std::map<Price, int, PriceComparator>& volume_tracker;
+	std::function<bool(const Price&, const Price&)> price_matches_condition;
 };
 
 class OrderbookImpl {
 public:
 	Orderbook::Result place_order(const Order& order, std::vector<Orderbook::TradeInfo>& trades);
     Orderbook::Result cancel_order(int order_id);
-    Orderbook::Result modify_order(int order_id, double new_price, int new_volume);
+    Orderbook::Result modify_order(int order_id, const Price& new_price, int new_volume);
+
+	// Compatibility method for transition
+    Orderbook::Result modify_order(int order_id, double new_price, int new_volume) {
+        return modify_order(order_id, Price(new_price), new_volume);
+    }
 
 	std::vector<Orderbook::BookLevel> get_bid_levels(int depth) const;
     std::vector<Orderbook::BookLevel> get_ask_levels(int depth) const;
-    double get_mid_price() const;
-    double get_best_bid() const;
-    double get_best_ask() const;
-    int get_volume_at_price(double price, buy_or_sell side) const;
+    Price get_mid_price() const;
+    Price get_best_bid() const;
+    Price get_best_ask() const;
+    int get_volume_at_price(const Price& price, buy_or_sell side) const;
+
+    int get_volume_at_price(double price, buy_or_sell side) const {
+		return get_volume_at_price(Price(price), side);
+	}
     
     void print_book() const;
 private:
-    std::map<double, std::list<Order>, std::greater<double>> bids; 
-    std::map<double, std::list<Order>> asks; 
-    std::map<double, int> bid_volume_at_price;
-    std::map<double, int> ask_volume_at_price;
+    std::map<Price, std::list<Order>, PriceGreater> bids; 
+    std::map<Price, std::list<Order>, PriceLess> asks; 
+    std::map<Price, int, PriceGreater> bid_volume_at_price;
+    std::map<Price, int, PriceLess> ask_volume_at_price;
     std::unordered_map<int, Order> order_location;
 
     void add_order(Order order_to_add);

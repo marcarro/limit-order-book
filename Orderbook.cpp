@@ -16,7 +16,7 @@ Orderbook::Result Orderbook::cancel_order(int order_id) {
     return impl_->cancel_order(order_id);
 }
 
-Orderbook::Result Orderbook::modify_order(int order_id, double new_price, int new_volume) {
+Orderbook::Result Orderbook::modify_order(int order_id, const Price& new_price, int new_volume) {
     return impl_->modify_order(order_id, new_price, new_volume);
 }
 
@@ -28,19 +28,19 @@ std::vector<Orderbook::BookLevel> Orderbook::get_ask_levels(int depth) const {
     return impl_->get_ask_levels(depth);
 }
 
-double Orderbook::get_mid_price() const {
+Price Orderbook::get_mid_price() const {
     return impl_->get_mid_price();
 }
 
-double Orderbook::get_best_bid() const {
+Price Orderbook::get_best_bid() const {
     return impl_->get_best_bid();
 }
 
-double Orderbook::get_best_ask() const {
+Price Orderbook::get_best_ask() const {
     return impl_->get_best_ask();
 }
 
-int Orderbook::get_volume_at_price(double price, buy_or_sell side) const {
+int Orderbook::get_volume_at_price(const Price& price, buy_or_sell side) const {
     return impl_->get_volume_at_price(price, side);
 }
 
