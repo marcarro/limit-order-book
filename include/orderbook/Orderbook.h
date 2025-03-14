@@ -11,7 +11,6 @@ class OrderbookImpl;
 
 class Orderbook {
 public:
-  	
     // Constructor/destructor
     Orderbook();
     ~Orderbook();

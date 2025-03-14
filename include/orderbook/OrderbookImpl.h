@@ -52,7 +52,6 @@ private:
     void add_order_to_book(Order* order);
     bool is_valid_order(const Order& order) const;
     bool has_duplicate_id(const Order& order) const;
-
 };
 
 }

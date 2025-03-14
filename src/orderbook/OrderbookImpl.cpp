@@ -443,6 +443,5 @@ bool OrderbookImpl::has_duplicate_id(const Order& order) const {
     return order_map_.find(order.get_order_id()) != order_map_.end();
 }
 
-
 }
 

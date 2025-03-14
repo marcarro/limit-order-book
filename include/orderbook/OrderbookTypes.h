@@ -7,13 +7,13 @@
 
 namespace trading {
 
-// order side
+// Order side
 enum class Side {
     BUY, 
     SELL
 };
 
-// result of order operations
+// Result of order operations
 enum class OrderResult {
     SUCCESS,
     PARTIAL_FILL,
@@ -24,7 +24,7 @@ enum class OrderResult {
     DUPLICATE_ORDER_ID
 };
 
-// trade execution information
+// Trrade execution information
 struct TradeInfo {
     int order_id;
     std::string client_name;
@@ -34,11 +34,11 @@ struct TradeInfo {
     std::string counterparty;
 };
 
-// market data price level
+// Market data price level
 struct BookLevel {
     Price price;
     int total_volume;
     int order_count;
 };
 
-} // namespace trading
+}

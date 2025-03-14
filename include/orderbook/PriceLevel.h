@@ -35,7 +35,7 @@ public:
     void update_volume(Order* order, int old_volume);
 };
 
-// manages a linked list of price levels
+// Manages a linked list of price levels
 class PriceLevelList {
 private:
     PriceLevel* head_ = nullptr;

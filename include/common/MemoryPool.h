@@ -8,7 +8,7 @@
 namespace trading {
 namespace memory {
 
-// generic memory block interface
+// Generic memory block interface
 template <typename T>
 class MemoryBlock {
 public:
@@ -21,7 +21,7 @@ public:
     virtual ~MemoryBlock() = default;
 };
 
-// fixed-size memory block implementation
+// Fixed-size memory block
 template <typename T, size_t BlockSize>
 class FixedMemoryBlock : public MemoryBlock<T> {
 private:
@@ -98,7 +98,7 @@ public:
     }
 };
 
-// expandable memory pool with multiple blocks
+// Expandable memory pool with multiple blocks
 template <typename T, size_t BlockSize = 1024>
 class MemoryPool {
 private:
@@ -162,5 +162,6 @@ public:
     }
 };
 
-} // namespace memory
-} // namespace trading
+}
+
+}
