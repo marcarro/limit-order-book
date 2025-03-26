@@ -24,12 +24,12 @@ int main() {
 		std::cout << "Order 1 result: " << static_cast<int>(result) << std::endl;
   	}
 	
-  	// Print market data
-    std::cout << "Best bid: " << orderbook.get_best_bid() << std::endl;
-    std::cout << "Best ask: " << orderbook.get_best_ask() << std::endl;
-    
-    // Print book state
-    orderbook.print_book();
+	// Print market data
+	std::cout << "Best bid: " << orderbook.get_best_bid() << std::endl;
+	std::cout << "Best ask: " << orderbook.get_best_ask() << std::endl;
+	
+	// Print book state
+	orderbook.print_book();
 
-  return 0;
+  	return 0;
 }
