@@ -2,7 +2,7 @@
 #define ORDER_H
 #pragma once
 
-#include <ctime>
+#include <chrono>
 #include <string>
 #include "OrderbookTypes.h"
 #include "../common/FixedPoint.h"
@@ -18,7 +18,7 @@ private:
     int order_id_;
     int volume_;
     Side side_;
-    std::time_t timestamp_;
+    std::chrono::system_clock::time_point timestamp_;
 public:
 
     Order* next = nullptr;
@@ -28,10 +28,10 @@ public:
 
     // Constructors
     Order();
-    Order(std::string _client, Price _price, int _order_id, int _volume, Side _side, std::time_t _timestamp);
+    Order(std::string _client, Price _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp);
 
     // Compatibility constructor for easier transition (use with caution)
-    Order(std::string _client, double _price, int _order_id, int _volume, Side _side, std::time_t _timestamp);
+    Order(std::string _client, double _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp);
     
     // Getters
     std::string get_client() const;
@@ -39,7 +39,7 @@ public:
     int get_order_id() const;
     int get_volume() const;
     Side get_side() const;
-    std::time_t get_timestamp() const;
+    std::chrono::system_clock::time_point get_timestamp() const;
     
     // Setters
     void set_client(std::string new_client);
@@ -47,7 +47,7 @@ public:
     void set_order_id(int new_order_id);
     void set_volume(int new_volume);
     void set_side(Side new_side);
-    void set_timestamp(std::time_t new_timestamp);
+    void set_timestamp(std::chrono::system_clock::time_point new_timestamp);
 };
 
 bool operator<(const Order& a, const Order& b);

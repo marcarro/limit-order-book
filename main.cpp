@@ -7,19 +7,20 @@
 using namespace trading;
 
 int main() {
+	using namespace std::chrono;
   	Orderbook orderbook;
   	std::vector<TradeInfo> trades;
   	
   	{
     	Benchmark benchmark;
-    	Order ord1("Alex G", Price("100.0000"), 1, 30, Side::SELL, time(0));
+    	Order ord1("Alex G", Price("100.0000"), 1, 30, Side::SELL, system_clock::now());
     	auto result = orderbook.place_order(ord1, trades);
 		std::cout << "Order 1 result: " << static_cast<int>(result) << std::endl;
   	}
 	
   	{
     	Benchmark benchmark;
-    	Order ord2("John M", 101.0, 2, 30, Side::SELL, time(0));
+    	Order ord2("John M", 101.0, 2, 30, Side::SELL, system_clock::now());
     	auto result = orderbook.place_order(ord2, trades);
 		std::cout << "Order 1 result: " << static_cast<int>(result) << std::endl;
   	}

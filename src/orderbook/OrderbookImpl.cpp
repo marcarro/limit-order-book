@@ -20,7 +20,7 @@ OrderbookImpl::~OrderbookImpl() {
 }
 	
 OrderResult OrderbookImpl::place_order(const Order& order, std::vector<TradeInfo>& trades) {
-	// Validate order first
+    // Validate order first
     if (!is_valid_order(order)) {
         return OrderResult::INVALID_ORDER;
     }
@@ -127,7 +127,7 @@ OrderResult OrderbookImpl::modify_order(int order_id, const Price& new_price, in
 	// For all other cases, treat as cancel + new order
 	Side side = order->get_side();
 	std::string client = order->get_client();
-	std::time_t timestamp = time(nullptr);
+	std::chrono::system_clock::time_point timestamp = std::chrono::system_clock::now();
 
 	// Cancel existing order
     auto result = cancel_order(order_id);
