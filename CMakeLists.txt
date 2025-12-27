@@ -18,12 +18,18 @@ add_library(orderbook_lib STATIC ${SOURCES})
 add_executable(orderbook main.cpp)
 target_link_libraries(orderbook orderbook_lib)
 
-# Enable testing (optional)
-option(BUILD_TESTS "Build the test programs" OFF)
-if(BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+
+# Build tests
+add_subdirectory(tests)
+
 
 # Compiler warnings and optimization
 if(MSVC)
