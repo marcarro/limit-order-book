@@ -74,15 +74,14 @@ OrderResult OrderbookImpl::cancel_order(int order_id) {
   	}
 
 	Order* order = it->second;
-	
-	// Remove from price level
-	if (order->level) {
-		order->level->remove_order(order);
+	PriceLevel* level = order->level;
 
+	// Remove from price level
+	if (level) {
+		level->remove_order(order);
 
 		// If price level is empty remove the level
-		if (order->level->get_order_count() == 0) {
-			PriceLevel* level = order->level;
+		if (level->get_order_count() == 0) {
 			if (order->get_side() == Side::BUY) {
 				bid_levels_.remove_level(level);
 			} else {
