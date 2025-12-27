@@ -18,11 +18,9 @@ int main() {
 	std::uniform_int_distribution<> side_dist(0, 1);
 
 	std::vector<std::string> clients = {
-		"Goldman Sachs", "JPMorgan", "Morgan Stanley", "Citadel",
-		"Jane Street", "Two Sigma", "Renaissance", "Bridgewater",
-		"DE Shaw", "Millennium", "Point72", "Balyasny",
-		"Susquehanna", "IMC", "Jump Trading", "Tower Research",
-		"Hudson River", "DRW", "Optiver", "Flow Traders"
+		"Goldman Sachs", "JPMorgan", "Morgan Stanley",
+		"Bridgewater", "DE Shaw", "Millennium", "Point72", 
+		"Balyasny", "Susquehanna", "IMC", "Flow Traders"
 	};
 
 	std::cout << "=== Building Realistic Order Book ===\n\n";
@@ -30,8 +28,8 @@ int main() {
 	{
 		Benchmark benchmark;
 
-		// Place 1000 orders around mid-price of 100
-		for (int i = 0; i < 1000; i++) {
+		// Place 500000 orders around mid-price of 100
+		for (int i = 0; i < 50000; i++) {
 			std::string client = clients[i % clients.size()];
 			double price = price_dist(gen);
 			int volume = volume_dist(gen);
