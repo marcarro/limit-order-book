@@ -23,7 +23,7 @@ int main() {
 		"Balyasny", "Susquehanna", "IMC", "Flow Traders"
 	};
 
-	std::cout << "=== Building Realistic Order Book ===\n\n";
+	std::cout << "=== Order Book ===\n\n";
 
 	{
 		Benchmark benchmark;
