@@ -5,9 +5,9 @@
 #include "include/common/FixedPoint.h"
 
 using namespace trading;
+using namespace std::chrono;
 
 int main() {
-	using namespace std::chrono;
   	Orderbook orderbook;
   	std::vector<TradeInfo> trades;
   	
