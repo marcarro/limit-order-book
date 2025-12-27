@@ -1,6 +1,5 @@
 #pragma once
 #include <array>
-#include <mutex>
 #include <cassert>
 #include <vector>
 #include <cstddef>
@@ -103,7 +102,6 @@ template <typename T, size_t BlockSize = 1024>
 class MemoryPool {
 private:
     std::vector<std::unique_ptr<MemoryBlock<T>>> blocks_;
-    std::mutex mutex_;
 
 public:
     MemoryPool() {
@@ -114,37 +112,32 @@ public:
     }
 
     T* allocate() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        
         // try to allocate from existing blocks
         for (auto& block : blocks_) {
             T* obj = block->allocate();
             if (obj != nullptr) return obj;
         }
-        
+
         // all blocks full, create a new one
         blocks_.push_back(
             std::make_unique<FixedMemoryBlock<T, BlockSize>>()
         );
-        
+
         return blocks_.back()->allocate();
     }
 
     void deallocate(T* obj) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        
         for (auto& block : blocks_) {
             if (block->owns(obj)) {
                 block->deallocate(obj);
                 return;
             }
         }
-        
+
         assert(false && "tried to deallocate object not owned by this pool");
     }
 
     size_t total_capacity() const {
-        std::lock_guard<std::mutex> lock(mutex_);
         size_t total = 0;
         for (const auto& block : blocks_) {
             total += block->capacity();
@@ -153,7 +146,6 @@ public:
     }
 
     size_t total_used() const {
-        std::lock_guard<std::mutex> lock(mutex_);
         size_t total = 0;
         for (const auto& block : blocks_) {
             total += block->used();
