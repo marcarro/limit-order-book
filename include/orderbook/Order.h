@@ -19,6 +19,8 @@ private:
     int volume_;
     Side side_;
     std::chrono::system_clock::time_point timestamp_;
+
+    static int next_order_id_;
 public:
 
     Order* next = nullptr;
@@ -28,10 +30,23 @@ public:
 
     // Constructors
     Order();
+
+    // Full control constructor
     Order(std::string _client, Price _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp);
 
-    // Compatibility constructor for easier transition (use with caution)
+    // Auto-generated order_id, manual timestamp
+    Order(std::string _client, Price _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp);
+
+    // Auto-generated order_id and timestamp
+    Order(std::string _client, Price _price, int _volume, Side _side);
+
+    // Compatibility constructors with double price
     Order(std::string _client, double _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp);
+    Order(std::string _client, double _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp);
+    Order(std::string _client, double _price, int _volume, Side _side);
+
+    // Reset auto-generated order ID counter (useful for tests)
+    static void reset_order_id_counter(int start_id = 1);
     
     // Getters
     std::string get_client() const;

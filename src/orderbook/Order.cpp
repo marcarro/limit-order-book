@@ -2,8 +2,11 @@
 
 namespace trading {
 
+// Initialize static counter
+int Order::next_order_id_ = 1;
+
 // Constructors
-Order::Order(): 
+Order::Order():
 	client_(""),
 	price_(0),
 	order_id_(0),
@@ -15,15 +18,46 @@ Order::Order():
 	level(nullptr)
 {}
 
+// Full control constructor
 Order::Order(std::string _client, Price _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
 	client_{_client},
 	price_{_price},
 	order_id_{_order_id},
 	volume_{_volume},
 	side_{_side},
-	timestamp_{_timestamp}
+	timestamp_{_timestamp},
+	next(nullptr),
+	prev(nullptr),
+	level(nullptr)
 {}
 
+// Auto-generated order_id, manual timestamp
+Order::Order(std::string _client, Price _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
+	client_{_client},
+	price_{_price},
+	order_id_{next_order_id_++},
+	volume_{_volume},
+	side_{_side},
+	timestamp_{_timestamp},
+	next(nullptr),
+	prev(nullptr),
+	level(nullptr)
+{}
+
+// Auto-generated order_id and timestamp
+Order::Order(std::string _client, Price _price, int _volume, Side _side):
+	client_{_client},
+	price_{_price},
+	order_id_{next_order_id_++},
+	volume_{_volume},
+	side_{_side},
+	timestamp_{std::chrono::system_clock::now()},
+	next(nullptr),
+	prev(nullptr),
+	level(nullptr)
+{}
+
+// Compatibility constructors with double price
 Order::Order(std::string _client, double _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
     client_(_client),
     price_(Price(_price)),
@@ -31,6 +65,30 @@ Order::Order(std::string _client, double _price, int _order_id, int _volume, Sid
     volume_(_volume),
     side_(_side),
     timestamp_(_timestamp),
+    next(nullptr),
+    prev(nullptr),
+    level(nullptr)
+{}
+
+Order::Order(std::string _client, double _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
+    client_(_client),
+    price_(Price(_price)),
+    order_id_(next_order_id_++),
+    volume_(_volume),
+    side_(_side),
+    timestamp_(_timestamp),
+    next(nullptr),
+    prev(nullptr),
+    level(nullptr)
+{}
+
+Order::Order(std::string _client, double _price, int _volume, Side _side):
+    client_(_client),
+    price_(Price(_price)),
+    order_id_(next_order_id_++),
+    volume_(_volume),
+    side_(_side),
+    timestamp_(std::chrono::system_clock::now()),
     next(nullptr),
     prev(nullptr),
     level(nullptr)
@@ -51,6 +109,11 @@ void Order::set_order_id(int new_order_id) { order_id_ = new_order_id; }
 void Order::set_volume(int new_volume) { volume_ = new_volume; }
 void Order::set_side(Side new_side) { side_ = new_side; }
 void Order::set_timestamp(std::chrono::system_clock::time_point new_timestamp) { timestamp_ = new_timestamp; }
+
+// Static method to reset order ID counter
+void Order::reset_order_id_counter(int start_id) {
+    next_order_id_ = start_id;
+}
 
 }
 
