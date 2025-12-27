@@ -150,6 +150,8 @@ OrderResult OrderbookImpl::modify_order(int order_id, const Price& new_price, in
 }
 
 OrderResult OrderbookImpl::match_against_asks(Order* order, std::vector<TradeInfo>& trades) {
+    bool any_match = false;
+
     while (order->get_volume() > 0 && !ask_levels_.empty()) {
         PriceLevel* best_ask = ask_levels_.get_best_level();
         
@@ -163,15 +165,14 @@ OrderResult OrderbookImpl::match_against_asks(Order* order, std::vector<TradeInf
         
         while (matching_order && order->get_volume() > 0) {
             int trade_volume = std::min(order->get_volume(), matching_order->get_volume());
-            
+            any_match = true;
+
             // Execute trade
-            int new_matching_volume = matching_order->get_volume() - trade_volume;
+            int old_matching_volume = matching_order->get_volume();
+            int new_matching_volume = old_matching_volume - trade_volume;
             int new_order_volume = order->get_volume() - trade_volume;
-            
-            matching_order->set_volume(new_matching_volume);
-            order->set_volume(new_order_volume);
-            
-            // Create trade info
+
+            // Create trade info (before modifying volumes)
             TradeInfo trade;
             trade.order_id = order->get_order_id();
             trade.client_name = order->get_client();
@@ -180,17 +181,24 @@ OrderResult OrderbookImpl::match_against_asks(Order* order, std::vector<TradeInf
             trade.is_buy = (order->get_side() == Side::BUY);
             trade.counterparty = matching_order->get_client();
             trades.push_back(trade);
-            
+
             // Get next order before potentially removing current one
             Order* next_matching = matching_order->next;
-            
-            // If matching order is fully filled, remove it
-            if (matching_order->get_volume() <= 0) {
+
+            // Update volumes and handle order lifecycle
+            if (new_matching_volume > 0) {
+                // Partially filled - update volume
+                matching_order->set_volume(new_matching_volume);
+                best_ask->update_volume(matching_order, old_matching_volume);
+            } else {
+                // Fully filled - remove before modifying volume
                 int matching_id = matching_order->get_order_id();
                 best_ask->remove_order(matching_order);
                 order_map_.erase(matching_id);
                 order_pool_.deallocate(matching_order);
             }
+
+            order->set_volume(new_order_volume);
             
             matching_order = next_matching;
         }
@@ -203,12 +211,18 @@ OrderResult OrderbookImpl::match_against_asks(Order* order, std::vector<TradeInf
         }
     }
     
-    return (order->get_volume() == 0) ? 
-        OrderResult::COMPLETE_FILL : 
-        OrderResult::PARTIAL_FILL;
+    if (order->get_volume() == 0) {
+        return OrderResult::COMPLETE_FILL;
+    } else if (any_match) {
+        return OrderResult::PARTIAL_FILL;
+    } else {
+        return OrderResult::SUCCESS;  // No matches, but order added to book
+    }
 }
 
 OrderResult OrderbookImpl::match_against_bids(Order* order, std::vector<TradeInfo>& trades) {
+    bool any_match = false;
+
     while (order->get_volume() > 0 && !bid_levels_.empty()) {
         PriceLevel* best_bid = bid_levels_.get_best_level();
         
@@ -222,15 +236,13 @@ OrderResult OrderbookImpl::match_against_bids(Order* order, std::vector<TradeInf
         
         while (matching_order && order->get_volume() > 0) {
             int trade_volume = std::min(order->get_volume(), matching_order->get_volume());
-            
+
             // Execute trade
-            int new_matching_volume = matching_order->get_volume() - trade_volume;
+            int old_matching_volume = matching_order->get_volume();
+            int new_matching_volume = old_matching_volume - trade_volume;
             int new_order_volume = order->get_volume() - trade_volume;
-            
-            matching_order->set_volume(new_matching_volume);
-            order->set_volume(new_order_volume);
-            
-            // Create trade info
+
+            // Create trade info (before modifying volumes)
             TradeInfo trade;
             trade.order_id = order->get_order_id();
             trade.client_name = order->get_client();
@@ -239,18 +251,25 @@ OrderResult OrderbookImpl::match_against_bids(Order* order, std::vector<TradeInf
             trade.is_buy = (order->get_side() == Side::BUY);
             trade.counterparty = matching_order->get_client();
             trades.push_back(trade);
-            
+
             // Get next order before potentially removing current one
             Order* next_matching = matching_order->next;
-            
-            // If matching order is fully filled, remove it
-            if (matching_order->get_volume() <= 0) {
+
+            // Update volumes and handle order lifecycle
+            if (new_matching_volume > 0) {
+                // Partially filled - update volume
+                matching_order->set_volume(new_matching_volume);
+                best_bid->update_volume(matching_order, old_matching_volume);
+            } else {
+                // Fully filled - remove before modifying volume
                 int matching_id = matching_order->get_order_id();
                 best_bid->remove_order(matching_order);
                 order_map_.erase(matching_id);
                 order_pool_.deallocate(matching_order);
             }
-            
+
+            order->set_volume(new_order_volume);
+
             matching_order = next_matching;
         }
         
@@ -262,9 +281,13 @@ OrderResult OrderbookImpl::match_against_bids(Order* order, std::vector<TradeInf
         }
     }
     
-    return (order->get_volume() == 0) ? 
-        OrderResult::COMPLETE_FILL : 
-        OrderResult::PARTIAL_FILL;
+    if (order->get_volume() == 0) {
+        return OrderResult::COMPLETE_FILL;
+    } else if (any_match) {
+        return OrderResult::PARTIAL_FILL;
+    } else {
+        return OrderResult::SUCCESS;
+    }
 }
 
 void OrderbookImpl::add_order_to_book(Order* order) {
