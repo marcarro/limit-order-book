@@ -88,7 +88,7 @@ void PriceLevel::update_volume(Order* order, int old_volume) {
     total_volume_ = total_volume_ - old_volume + order->get_volume();
 }
 
-PriceLevel* PriceLevelList::find_level(const Price& price) {
+PriceLevel* PriceLevelList::find_level(const Price& price) const {
     auto it = price_map_.find(price);
     if (it != price_map_.end()) {
         return it->second;

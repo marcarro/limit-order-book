@@ -51,7 +51,7 @@ public:
         : head_(nullptr), tail_(nullptr), is_bid_side_(is_bid_side), pool_(pool) {}
 
     
-    PriceLevel* find_level(const Price& price);
+    PriceLevel* find_level(const Price& price) const;
     PriceLevel* create_level(const Price& price);
     void remove_level(PriceLevel* level);
     
