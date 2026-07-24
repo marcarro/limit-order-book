@@ -1,6 +1,6 @@
 # Benchmark Results
 
-## Run environment
+## Environment
 
 | Property | Value |
 | --- | --- |
@@ -8,57 +8,35 @@
 | CPU | Apple M1 Pro (arm64) |
 | OS | macOS 26.2 (25C56) |
 | Compiler | Apple clang 17.0.0 (clang-1700.0.13.5) |
-| Build | CMake Release |
-| Project compile flags | `-O3 -march=native -Wall -Wextra -Wpedantic` |
-
-Run with:
-
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release -j
-./build/orderbook_bench
-```
+| Build | CMake Release, `-O3 -march=native` |
 
 ## Methodology
 
-The benchmark target is separate from the demo executable. It creates the order streams before timing starts: no random-number generation, input construction, or harness vector growth runs inside a measured operation.
+The benchmark is a separate target from the demo. It starts each trial from a freshly built 500-order book: 64 bid levels, 64 ask levels, four resting orders per normal level, and one order at each of the four best ask levels used by sweep scenarios.
 
-Each trial starts from a freshly built steady-state book with 64 bid levels, 64 ask levels, and 500 resting orders. The book is warmed for 5,000 operations, then 25,000 operations are measured. Each scenario runs seven independent trials; this report uses the trial whose median latency is the median of the seven trial medians and includes the observed trial spread.
+Every scenario runs seven trials, discards 1,000 warmup samples, and records 5,000 measured samples. Input orders, order/price pools, order and price indexes, and `ExecutionBuffer` are created before a timed operation. The benchmark overrides global `new` / `delete` and counts only calls made while an operation is timed.
 
-The benchmark measures an empty timing region separately and subtracts its median overhead. On this machine the smallest non-zero `steady_clock` delta was about 41 ns. Results at or below that value are explicitly marked resolution-limited.
-
-The benchmark overrides global `new` and `delete` in the benchmark binary and counts calls only while an operation is timed. It pre-reserves the order and price-level pools and the trade vector. Client IDs deliberately exceed small-string optimization capacity, so the measurement includes the engine's real `std::string` copies as well as allocations from its `std::unordered_map<int, Order*>` order index.
+Resting adds and cancels are measured in 128-operation batches. Each batch is compared with an equal empty loop containing a compiler fence; the reported value is the adjusted batch time divided by 128. This avoids presenting the local roughly 41 ns single-call timer quantum as a cancellation result.
 
 ## Results
 
-| Scenario | Operation | Median | p99 | p99.9 | Throughput | Trial median spread | Heap allocs/op | Heap deallocs/op |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Add resting | Non-crossing buy at an existing bid level; cancelled after timing | 83 ns | 125 ns | 208 ns | 13.40M/s | 83-83 ns | 2 | 0 |
-| Cancel existing | Cancel a resting buy appended to an existing bid level | 42 ns* | 42 ns | 125 ns | 28.54M/s | 42-42 ns | 0 | 1 |
-| Single match | Crossing buy fills one best-ask order | 458 ns | 542 ns | 1,959 ns | 2.19M/s | 458-458 ns | 5 | 6 |
-| Four-level sweep | Crossing buy fills one order at each of four ask levels | 1,125 ns | 1,250 ns | 5,333 ns | 0.87M/s | 1,125-1,125 ns | 17 | 21 |
-| Mixed stream | 55% add, 25% cancel, 15% single match, 5% four-level sweep | 83 ns | 1,458 ns | 2,542 ns | 4.95M/s | 83-83 ns | 2 median, 17 p99, 17 max | 0 median, 21 max |
+| Scenario | Median | p99 | p99.9 | Throughput | Trial median spread | Heap allocs/op | Heap deallocs/op |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Add resting, batch-normalized | 14.0 ns | 644.9 ns | 834.3 ns | 71.43M/s | 14.0-14.3 ns | 0 | 0 |
+| Cancel existing, batch-normalized | 99.0 ns | 791.0 ns | 917.7 ns | 10.10M/s | 99.0-99.3 ns | 0 | 0 |
+| Single match | 375.0 ns | 750.0 ns | 833.0 ns | 2.67M/s | 375.0-416.0 ns | 0 | 0 |
+| Four-level sweep | 1,500.0 ns | 1,875.0 ns | 2,555.1 ns | 0.67M/s | 1,500.0-1,541.0 ns | 0 | 0 |
+| Mixed stream: 55% add, 25% cancel, 15% single match, 5% sweep | 42.0 ns* | 1,542.0 ns | 1,875.0 ns | 23.81M/s | 42.0-42.0 ns | 0 | 0 |
 
-`*` The measured median is at the local timer quantum, so it should be read as “at most roughly 42 ns under this harness,” not as a precise per-operation latency.
+`*` The mixed stream is intentionally measured one event at a time, so its median remains at the local clock floor. Use the batch-normalized add and cancel figures for those operation-specific numbers.
 
-Clock-overhead samples had a 0 ns median, 42 ns p99, and an approximately 41 ns minimum non-zero quantum. The benchmark subtracts the 0 ns median; it does not pretend this removes quantization noise from sub-quantum operations.
+## What this proves
 
-## Allocation findings
-
-The accurate claim is that `Order` and `PriceLevel` storage comes from a block pool, not that the entire hot path is heap-allocation free:
-
-- Adding a resting order made **two heap allocation calls per operation**: one for the copied long client ID in the stored `Order`, and one for the `order_map_` node.
-- A fully filled single-level match made **five heap allocation calls**: one for the incoming stored `Order` client ID, plus two long client IDs copied into the stack `TradeInfo` and again into the pre-reserved trade vector.
-- A four-level sweep made **17 heap allocation calls**: one incoming `Order` client copy and four long-string allocations for each of four emitted trades.
-- Cancelling a resting order made **one heap deallocation call per operation** when the map node was erased.
-- `MemoryPool` has a growth path that creates another block if all existing blocks are full. The benchmark pre-reserves capacity, so that path did not run. Production code must size or bound pools appropriately if allocation-free behavior is required.
+The measured engine path performs no heap allocation or deallocation for resting adds, cancellations, one-level matches, or four-level sweeps. This includes emitting executions because `ExecutionBuffer` is preallocated and carries numeric IDs instead of owning strings.
 
 ## What this does not measure
 
-- Multi-threaded contention, synchronization, or lock-free behavior.
-- Network, exchange protocol parsing, persistence, recovery, risk checks, or market-data publication.
-- Real market order flow, adverse selection, self-trade prevention, or exchange-specific rules.
-- Tail latency under CPU contention, thermal throttling, power management, or heterogeneous-core scheduling. The M1 Pro can vary under those conditions.
-- Exact latency below the roughly 41 ns local timer quantum.
-
-These figures are useful local microbenchmark evidence for the in-memory matching engine, not an end-to-end production exchange capacity claim.
+- Network, persistence, protocol parsing, risk checks, or market-data publishing.
+- Concurrent matching, lock contention, CPU affinity, thermal variance, or heterogeneous-core scheduling.
+- An instrument-specific direct price ladder. This generic engine uses a fixed hash table and fixed binary heap, so new price levels cost `O(log L)` heap work.
+- End-to-end exchange latency or throughput under production traffic.

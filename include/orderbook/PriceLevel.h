@@ -1,68 +1,62 @@
 #pragma once
+
+#include <cstddef>
+#include <vector>
+
 #include "Order.h"
-#include "../common/FixedPoint.h"
-#include "../common/MemoryPool.h"
-#include <map>
+#include "../common/FixedHashMap.h"
+#include "../common/FixedPool.h"
 
 namespace trading {
 
 class PriceLevel {
-private:
-    Price price_;
-    int total_volume_ = 0;
-    int order_count_ = 0;
-
 public:
-    // intrusive order list
+    Price price{};
+    Quantity total_volume = 0;
+    std::size_t order_count = 0;
+    std::size_t heap_index = 0;
     Order* head = nullptr;
     Order* tail = nullptr;
-    
-    // intrusive price level list
-    PriceLevel* next_price = nullptr;
-    PriceLevel* prev_price = nullptr;
-    
-    // constructors
-    explicit PriceLevel(const Price& price);
-    
-    // accessors
-    Price get_price() const;
-    int get_total_volume() const;
-    int get_order_count() const;
-    
-    // order management
+
+    void reset(const Price& new_price);
     void add_order(Order* order);
     void remove_order(Order* order);
-    void update_volume(Order* order, int old_volume);
+    void update_quantity(Order* order, Quantity old_quantity);
 };
 
-// Manages a linked list of price levels
-class PriceLevelList {
-private:
-    PriceLevel* head_ = nullptr;
-    PriceLevel* tail_ = nullptr;
-    bool is_bid_side_;
-	memory::MemoryPool<PriceLevel>* pool_;
-
-    // fast lookup by price
-    std::map<Price, PriceLevel*> price_map_;
-
+class PriceLevelSide {
 public:
-	explicit PriceLevelList(bool is_bid_side, memory::MemoryPool<PriceLevel>& pool)
-        : head_(nullptr), tail_(nullptr), is_bid_side_(is_bid_side), pool_(&pool) {}
+    PriceLevelSide(bool bid_side, std::size_t max_price_levels);
 
-    
-    PriceLevel* find_level(const Price& price) const;
-    PriceLevel* find_or_create_level(const Price& price);
-    void remove_level(PriceLevel* level);
+    PriceLevel* find(const Price& price);
+    const PriceLevel* find(const Price& price) const;
+    PriceLevel* best();
+    const PriceLevel* best() const;
+    bool empty() const { return heap_size_ == 0; }
+    std::size_t size() const { return heap_size_; }
+    bool full() const { return levels_by_price_.full(); }
 
-    PriceLevel* get_best_level() const;
-    bool empty() const;
+    PriceLevel* create(const Price& price, memory::FixedPool<PriceLevel>& pool);
+    void remove(PriceLevel* level, memory::FixedPool<PriceLevel>& pool);
+    void collect(std::vector<const PriceLevel*>& levels) const;
 
-    // iterate through price levels
-    PriceLevel* begin() const;
-    PriceLevel* next(PriceLevel* current) const;
+    template <typename Fn>
+    void for_each(Fn&& fn) const {
+        for (std::size_t index = 0; index < heap_size_; ++index) {
+            fn(*heap_[index]);
+        }
+    }
 
-    void set_pool(memory::MemoryPool<PriceLevel>& pool) { pool_ = &pool; }
+private:
+    bool better(const PriceLevel* lhs, const PriceLevel* rhs) const;
+    void sift_up(std::size_t index);
+    void sift_down(std::size_t index);
+    void remove_from_heap(std::size_t index);
+
+    bool bid_side_;
+    memory::FixedHashMap<std::int64_t, PriceLevel*> levels_by_price_;
+    std::vector<PriceLevel*> heap_;
+    std::size_t heap_size_ = 0;
 };
 
-}
+} // namespace trading

@@ -1,75 +1,21 @@
 #include <iostream>
-#include "include/orderbook/Orderbook.h"
-#include "include/orderbook/Order.h"
-#include "include/common/FixedPoint.h"
+
+#include "orderbook/Orderbook.h"
 
 using namespace trading;
 
 int main() {
-	Orderbook orderbook;
-	std::vector<TradeInfo> trades;
+    Orderbook book;
+    ExecutionBuffer executions{book.max_orders()};
 
-	std::cout << "=== Order Book ===\n\n";
+    book.place_order(Order{1, Price("99.9500"), 1, 200, Side::BUY}, executions);
+    book.place_order(Order{2, Price("99.9000"), 2, 150, Side::BUY}, executions);
+    book.place_order(Order{3, Price("100.0500"), 3, 100, Side::SELL}, executions);
+    book.place_order(Order{4, Price("100.1000"), 4, 250, Side::SELL}, executions);
 
-	Order bid_one("MM1", 99.95, 1, 200, Side::BUY, std::chrono::system_clock::time_point{});
-	Order bid_two("MM2", 99.90, 2, 150, Side::BUY, std::chrono::system_clock::time_point{});
-	Order ask_one("MM3", 100.05, 3, 100, Side::SELL, std::chrono::system_clock::time_point{});
-	Order ask_two("MM4", 100.10, 4, 250, Side::SELL, std::chrono::system_clock::time_point{});
-
-	orderbook.place_order(bid_one, trades);
-	orderbook.place_order(bid_two, trades);
-	orderbook.place_order(ask_one, trades);
-	orderbook.place_order(ask_two, trades);
-
-	std::cout << "\n=== Order Book Statistics ===\n";
-	std::cout << "Total orders in book: " << orderbook.order_count() << "\n";
-	std::cout << "Total price levels: " << orderbook.price_level_count() << "\n";
-	std::cout << "Total trades executed: " << trades.size() << "\n";
-	std::cout << "Best bid: " << orderbook.get_best_bid().to_string() << "\n";
-	std::cout << "Best ask: " << orderbook.get_best_ask().to_string() << "\n";
-	std::cout << "Mid price: " << orderbook.get_mid_price().to_string() << "\n";
-
-	if (!trades.empty()) {
-		int total_volume = 0;
-		for (const auto& trade : trades) {
-			total_volume += trade.volume;
-		}
-		std::cout << "Total volume traded: " << total_volume << "\n";
-	}
-
-	std::cout << "\n=== Top 10 Levels ===\n";
-	orderbook.print_book();
-
-	// Demonstrate order operations
-	std::cout << "\n=== Testing Order Operations ===\n";
-
-	// Place a large buy order that will cross the spread
-	std::cout << "\nPlacing aggressive buy order (500 @ 100.50)...\n";
-	trades.clear();
-	Order aggressive_buy("Aggressive Trader", 100.50, 500, Side::BUY);
-	auto result = orderbook.place_order(aggressive_buy, trades);
-	std::cout << "Result: " << static_cast<int>(result) << "\n";
-	std::cout << "Trades executed: " << trades.size() << "\n";
-
-	if (!trades.empty()) {
-		std::cout << "First trade: " << trades[0].volume << " @ "
-		          << trades[0].price.to_string() << " with "
-		          << trades[0].counterparty << "\n";
-	}
-
-	// Place a passive order that rests in the book
-	std::cout << "\nPlacing passive sell order (100 @ 100.80)...\n";
-	trades.clear();
-	Order passive_sell("Market Maker", 100.80, 100, Side::SELL);
-	result = orderbook.place_order(passive_sell, trades);
-	std::cout << "Result: " << static_cast<int>(result) << "\n";
-	std::cout << "Order resting in book\n";
-
-	std::cout << "\n=== Final Book State ===\n";
-	std::cout << "Total orders: " << orderbook.order_count() << "\n";
-	std::cout << "Best bid: " << orderbook.get_best_bid().to_string() << "\n";
-	std::cout << "Best ask: " << orderbook.get_best_ask().to_string() << "\n";
-	std::cout << "Spread: " << (orderbook.get_best_ask() - orderbook.get_best_bid()).to_string() << "\n";
-
-	return 0;
+    std::cout << "orders: " << book.order_count() << '\n';
+    std::cout << "best bid: " << book.get_best_bid() << '\n';
+    std::cout << "best ask: " << book.get_best_ask() << '\n';
+    book.print_book();
+    return 0;
 }

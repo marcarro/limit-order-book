@@ -1,28 +1,28 @@
 # C++ Limit Order Book
 
-A single-threaded in-memory limit order book for studying matching-engine fundamentals. It maintains price-time priority with fixed-point prices, an order-ID hash map for direct cancellation, ordered price-level lookup, intrusive FIFO order queues, and block-allocated `Order` / `PriceLevel` storage.
+A fixed-capacity, single-threaded in-memory matching engine with price-time priority. The matching core accepts numeric orders, writes numeric executions into a caller-provided preallocated buffer, and performs no heap allocation after construction.
 
-## Design
+## Core design
 
-- **Price-time priority:** the best executable price is matched first; orders at the same price are matched FIFO.
-- **Fixed-point prices:** `Price` stores four decimal places as an integer, avoiding floating-point comparison drift in matching.
-- **Order lookup:** `std::unordered_map<int, Order*>` finds an order by ID for cancellation and modification.
-- **Price levels:** `std::map<Price, PriceLevel*>` supports price lookup, while intrusive `prev_price` / `next_price` links keep best-to-worst traversal cheap.
-- **FIFO queues:** each `PriceLevel` owns an intrusive linked list of its resting orders, so removing a known order does not scan the level.
-- **Block allocator:** `MemoryPool` allocates `Order` and `PriceLevel` objects in fixed blocks. It can grow when capacity is exceeded; the benchmark reserves capacity before timing.
+- **Numeric boundary:** `Order` and `Execution` carry `ClientId` / `OrderId`, never client strings. String-to-ID resolution belongs in an API adapter before an order reaches the book.
+- **Fixed capacity:** `OrderbookConfig` fixes maximum live orders and price levels at construction. Capacity failures are explicit results, never dynamic growth on the matching path.
+- **Preallocated execution output:** callers supply `ExecutionBuffer` with capacity at least `book.max_orders()`. This makes a multi-fill order atomic without allocating or risking partial output.
+- **Order lookup:** a fixed-capacity open-addressing hash table supports direct cancellation without node allocations or rehashing.
+- **Price levels:** each side uses a fixed price-to-level hash table plus a preallocated binary heap for best-price lookup. Orders at a price live in an intrusive FIFO queue.
+- **Exact arithmetic:** prices use four-decimal fixed-point values.
 
 ## Benchmarks
 
-Measured on an Apple M1 Pro with Apple clang 17.0.0 in Release mode (`-O3 -march=native`), using a warmed 500-order book and seven trials.
+Measured on an Apple M1 Pro with Apple clang 17.0.0 in Release mode (`-O3 -march=native`). The warm book holds 500 resting orders across 64 bid and 64 ask levels; each result is the representative run from seven trials.
 
-| Scenario | Median | p99 | Throughput | Heap allocations/op |
-| --- | ---: | ---: | ---: | ---: |
-| Single-level match | 458 ns | 542 ns | 2.19M ops/s | 5 |
-| Four-level sweep | 1,125 ns | 1,250 ns | 0.87M ops/s | 17 |
-| Add resting order | 83 ns | 125 ns | 13.40M ops/s | 2 |
-| Cancel resting order | 42 ns* | 42 ns | 28.54M ops/s | 0 |
+| Scenario | Median | p99 | Heap allocations/op |
+| --- | ---: | ---: | ---: |
+| Resting add, batch-normalized | 14.0 ns | 644.9 ns | 0 |
+| Cancel, batch-normalized | 99.0 ns | 791.0 ns | 0 |
+| One-level match | 375.0 ns | 750.0 ns | 0 |
+| Four-level sweep | 1,500.0 ns | 1,875.0 ns | 0 |
 
-`*` The cancel median is at the local timer quantum (about 41 ns), so it is resolution-limited rather than a precise latency claim. Full methodology, variability, allocation counts, and limitations are in [BENCHMARKS.md](BENCHMARKS.md).
+The add and cancel benchmarks time batches of 128 operations, subtract a matching empty-loop control, then divide by 128. Full methodology and limitations are in [BENCHMARKS.md](BENCHMARKS.md).
 
 ## Build and run
 
@@ -36,6 +36,6 @@ ctest --test-dir build --output-on-failure
 ./build/orderbook_bench
 ```
 
-## Scope and limitations
+## Scope
 
-This is a learning-oriented, single-threaded engine. It does not model network I/O, persistence, market-data feeds, risk controls, synchronization, exchange protocols, self-trade prevention, or production durability. The benchmark is synthetic and local; it is not a claim about end-to-end exchange throughput.
+This is a bounded, single-threaded matching core. It does not provide client-ID registration, networking, persistence, risk controls, market-data publication, concurrency, exchange protocol handling, or an instrument-specific direct price ladder. Those belong outside this core or require an explicit bounded tick-range contract.
