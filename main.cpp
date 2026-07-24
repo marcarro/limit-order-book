@@ -1,8 +1,6 @@
 #include <iostream>
-#include <random>
 #include "include/orderbook/Orderbook.h"
 #include "include/orderbook/Order.h"
-#include "include/utils/Benchmark.h"
 #include "include/common/FixedPoint.h"
 
 using namespace trading;
@@ -11,34 +9,17 @@ int main() {
 	Orderbook orderbook;
 	std::vector<TradeInfo> trades;
 
-	std::random_device rd;
-	std::mt19937 gen(42);
-	std::uniform_real_distribution<> price_dist(99.0, 101.0);
-	std::uniform_int_distribution<> volume_dist(10, 500);
-	std::uniform_int_distribution<> side_dist(0, 1);
-
-	std::vector<std::string> clients = {
-		"Goldman Sachs", "JPMorgan", "Morgan Stanley",
-		"Bridgewater", "DE Shaw", "Millennium", "Point72", 
-		"Balyasny", "Susquehanna", "IMC", "Flow Traders"
-	};
-
 	std::cout << "=== Order Book ===\n\n";
 
-	{
-		Benchmark benchmark;
+	Order bid_one("MM1", 99.95, 1, 200, Side::BUY, std::chrono::system_clock::time_point{});
+	Order bid_two("MM2", 99.90, 2, 150, Side::BUY, std::chrono::system_clock::time_point{});
+	Order ask_one("MM3", 100.05, 3, 100, Side::SELL, std::chrono::system_clock::time_point{});
+	Order ask_two("MM4", 100.10, 4, 250, Side::SELL, std::chrono::system_clock::time_point{});
 
-		// Place 500000 orders around mid-price of 100
-		for (int i = 0; i < 50000; i++) {
-			std::string client = clients[i % clients.size()];
-			double price = price_dist(gen);
-			int volume = volume_dist(gen);
-			Side side = side_dist(gen) == 0 ? Side::BUY : Side::SELL;
-
-			Order order(client, price, volume, side);
-			orderbook.place_order(order, trades);
-		}
-	}
+	orderbook.place_order(bid_one, trades);
+	orderbook.place_order(bid_two, trades);
+	orderbook.place_order(ask_one, trades);
+	orderbook.place_order(ask_two, trades);
 
 	std::cout << "\n=== Order Book Statistics ===\n";
 	std::cout << "Total orders in book: " << orderbook.order_count() << "\n";

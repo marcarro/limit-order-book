@@ -44,12 +44,14 @@ public:
 		return get_volume_at_price(Price(price), side);
 	}
 
-	// Metrics
-	size_t order_count() const { return order_map_.size(); }
-	size_t price_level_count() const;
+	    // Metrics
+		size_t order_count() const { return order_map_.size(); }
+	    size_t price_level_count() const;
+        void reserve_orders(size_t live_orders);
+        void reserve_price_levels(size_t total_levels);
 
-    // Debug functionality
-    void print_book() const;
+	    // Debug functionality
+	    void print_book() const;
 
 private:
 	// Memory management
@@ -64,6 +66,7 @@ private:
 	std::unordered_map<int, Order*> order_map_;
 
 	// Order matching logic
+    OrderResult match_orders(Order* order, std::vector<TradeInfo>& trades, PriceLevelList& levels, bool is_buy_order);
     OrderResult match_against_asks(Order* order, std::vector<TradeInfo>& trades);
     OrderResult match_against_bids(Order* order, std::vector<TradeInfo>& trades);
 

@@ -19,7 +19,7 @@ Order::Order():
 {}
 
 // Full control constructor
-Order::Order(std::string _client, Price _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
+Order::Order(const std::string& _client, Price _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
 	client_{_client},
 	price_{_price},
 	order_id_{_order_id},
@@ -32,7 +32,7 @@ Order::Order(std::string _client, Price _price, int _order_id, int _volume, Side
 {}
 
 // Auto-generated order_id, manual timestamp
-Order::Order(std::string _client, Price _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
+Order::Order(const std::string& _client, Price _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
 	client_{_client},
 	price_{_price},
 	order_id_{next_order_id_++},
@@ -45,7 +45,7 @@ Order::Order(std::string _client, Price _price, int _volume, Side _side, std::ch
 {}
 
 // Auto-generated order_id and timestamp
-Order::Order(std::string _client, Price _price, int _volume, Side _side):
+Order::Order(const std::string& _client, Price _price, int _volume, Side _side):
 	client_{_client},
 	price_{_price},
 	order_id_{next_order_id_++},
@@ -58,7 +58,7 @@ Order::Order(std::string _client, Price _price, int _volume, Side _side):
 {}
 
 // Compatibility constructors with double price
-Order::Order(std::string _client, double _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
+Order::Order(const std::string& _client, double _price, int _order_id, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
     client_(_client),
     price_(Price(_price)),
     order_id_(_order_id),
@@ -70,7 +70,7 @@ Order::Order(std::string _client, double _price, int _order_id, int _volume, Sid
     level(nullptr)
 {}
 
-Order::Order(std::string _client, double _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
+Order::Order(const std::string& _client, double _price, int _volume, Side _side, std::chrono::system_clock::time_point _timestamp):
     client_(_client),
     price_(Price(_price)),
     order_id_(next_order_id_++),
@@ -82,7 +82,7 @@ Order::Order(std::string _client, double _price, int _volume, Side _side, std::c
     level(nullptr)
 {}
 
-Order::Order(std::string _client, double _price, int _volume, Side _side):
+Order::Order(const std::string& _client, double _price, int _volume, Side _side):
     client_(_client),
     price_(Price(_price)),
     order_id_(next_order_id_++),
@@ -93,14 +93,6 @@ Order::Order(std::string _client, double _price, int _volume, Side _side):
     prev(nullptr),
     level(nullptr)
 {}
-
-// Getters
-std::string Order::get_client() const { return client_; }
-Price Order::get_price() const { return price_; }
-int Order::get_order_id() const { return order_id_; }
-int Order::get_volume() const { return volume_; }
-Side Order::get_side() const { return side_; }
-std::chrono::system_clock::time_point Order::get_timestamp() const { return timestamp_; }
 
 // Setters
 void Order::set_client(std::string new_client) { client_ = new_client; }

@@ -96,94 +96,49 @@ PriceLevel* PriceLevelList::find_level(const Price& price) const {
     return nullptr;
 }
 
-PriceLevel* PriceLevelList::create_level(const Price& price) {
-    // Check if level already exists
+PriceLevel* PriceLevelList::find_or_create_level(const Price& price) {
     PriceLevel* existing = find_level(price);
     if (existing) {
         return existing;
     }
     
     // Create new price level
-    PriceLevel* new_level = pool_.allocate();
+    PriceLevel* new_level = pool_->allocate();
 	new (new_level) PriceLevel(price);
-    
-    // Insert into the sorted linked list
-    if (!head_) {
-        // First level in the list
-        head_ = tail_ = new_level;
-        new_level->next_price = nullptr;
-        new_level->prev_price = nullptr;
-    } else {
-        // Find the correct position to insert
-        PriceLevel* current = head_;
-        PriceLevel* prev = nullptr;
-		(void) prev;
-        
-        bool inserted = false;
-        
-        if (is_bid_side_) {
-            // For bid side, we want descending order (highest price first)
-            while (current && !inserted) {
-                if (price > current->get_price()) {
-                    // Insert before current
-                    new_level->next_price = current;
-                    new_level->prev_price = current->prev_price;
-                    
-                    if (current->prev_price) {
-                        current->prev_price->next_price = new_level;
-                    } else {
-                        head_ = new_level; // New head
-                    }
-                    
-                    current->prev_price = new_level;
-                    inserted = true;
-                } else {
-                    prev = current;
-                    current = current->next_price;
-                }
-            }
-            
-            if (!inserted) {
-                // Insert at the end
-                tail_->next_price = new_level;
-                new_level->prev_price = tail_;
-                new_level->next_price = nullptr;
-                tail_ = new_level;
-            }
+
+    auto [insert_pos, inserted] = price_map_.emplace(price, new_level);
+    (void)inserted;
+
+    PriceLevel* lower = (insert_pos != price_map_.begin()) ? std::prev(insert_pos)->second : nullptr;
+    PriceLevel* higher = (std::next(insert_pos) != price_map_.end()) ? std::next(insert_pos)->second : nullptr;
+
+    if (is_bid_side_) {
+        new_level->prev_price = higher;
+        new_level->next_price = lower;
+        if (higher) {
+            higher->next_price = new_level;
         } else {
-            // For ask side, we want ascending order (lowest price first)
-            while (current && !inserted) {
-                if (price < current->get_price()) {
-                    // Insert before current
-                    new_level->next_price = current;
-                    new_level->prev_price = current->prev_price;
-                    
-                    if (current->prev_price) {
-                        current->prev_price->next_price = new_level;
-                    } else {
-                        head_ = new_level; // New head
-                    }
-                    
-                    current->prev_price = new_level;
-                    inserted = true;
-                } else {
-                    prev = current;
-                    current = current->next_price;
-                }
-            }
-            
-            if (!inserted) {
-                // Insert at the end
-                tail_->next_price = new_level;
-                new_level->prev_price = tail_;
-                new_level->next_price = nullptr;
-                tail_ = new_level;
-            }
+            head_ = new_level;
+        }
+        if (lower) {
+            lower->prev_price = new_level;
+        } else {
+            tail_ = new_level;
+        }
+    } else {
+        new_level->prev_price = lower;
+        new_level->next_price = higher;
+        if (lower) {
+            lower->next_price = new_level;
+        } else {
+            head_ = new_level;
+        }
+        if (higher) {
+            higher->prev_price = new_level;
+        } else {
+            tail_ = new_level;
         }
     }
-    
-    // Add to price map for fast lookups
-    price_map_[price] = new_level;
     
     return new_level;
 }

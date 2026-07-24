@@ -24,12 +24,12 @@ Orderbook::~Orderbook() {
 Orderbook::Orderbook(Orderbook&& other) noexcept :
     order_pool_(std::move(other.order_pool_)),
     level_pool_(std::move(other.level_pool_)),
-    bid_levels_(true, level_pool_),
-    ask_levels_(false, level_pool_),
+    bid_levels_(std::move(other.bid_levels_)),
+    ask_levels_(std::move(other.ask_levels_)),
     order_map_(std::move(other.order_map_))
 {
-    // Note: bid_levels_ and ask_levels_ are reconstructed with new pool reference
-    // Original design with references makes true move semantics impossible
+    bid_levels_.set_pool(level_pool_);
+    ask_levels_.set_pool(level_pool_);
 }
 
 // Move assignment
@@ -37,8 +37,12 @@ Orderbook& Orderbook::operator=(Orderbook&& other) noexcept {
     if (this != &other) {
         order_pool_ = std::move(other.order_pool_);
         level_pool_ = std::move(other.level_pool_);
+        bid_levels_ = std::move(other.bid_levels_);
+        ask_levels_ = std::move(other.ask_levels_);
         order_map_ = std::move(other.order_map_);
-        // bid_levels_ and ask_levels_ cannot be moved due to reference members
+
+        bid_levels_.set_pool(level_pool_);
+        ask_levels_.set_pool(level_pool_);
     }
     return *this;
 }
@@ -66,11 +70,9 @@ OrderResult Orderbook::place_order(const Order& order, std::vector<TradeInfo>& t
 
 
 	// Match order
-	if (new_order->get_side() == Side::BUY) {
-		match_against_asks(new_order, trades);
-	} else {
-		match_against_bids(new_order, trades);
-	}
+    bool isBuyOrder = new_order->get_side() == Side::BUY;
+    PriceLevelList& levelList = isBuyOrder ? ask_levels_ : bid_levels_;
+    match_orders(new_order, trades, levelList, isBuyOrder);
 
 	// If any volume remains, add to book
 	if (new_order->get_volume() > 0) {
@@ -173,30 +175,31 @@ OrderResult Orderbook::modify_order(int order_id, const Price& new_price, int ne
     return place_order(new_order, trades);
 }
 
-OrderResult Orderbook::match_against_asks(Order* order, std::vector<TradeInfo>& trades) {
+OrderResult Orderbook::match_orders(Order* order, std::vector<TradeInfo>& trades, PriceLevelList& levels, bool is_buy_order) {
     bool any_match = false;
+    int remaining_order_volume = order->get_volume();
 
-    while (order->get_volume() > 0 && !ask_levels_.empty()) {
-        PriceLevel* best_ask = ask_levels_.get_best_level();
-        
-        // Check if price matches
-        if (best_ask->get_price() > order->get_price()) {
-            break; // No more matching
+    while (remaining_order_volume > 0 && !levels.empty()) {
+        PriceLevel* best_level = levels.get_best_level();
+
+        bool price_mismatch = is_buy_order
+            ? best_level->get_price() > order->get_price()
+            : best_level->get_price() < order->get_price();
+
+        if (price_mismatch) {
+            break;
         }
-        
-        // Match against orders at this level
-        Order* matching_order = best_ask->head;
-        
-        while (matching_order && order->get_volume() > 0) {
-            int trade_volume = std::min(order->get_volume(), matching_order->get_volume());
+
+        Order* matching_order = best_level->head;
+
+        while (matching_order && remaining_order_volume > 0) {
+            int matching_volume = matching_order->get_volume();
+            int trade_volume = std::min(remaining_order_volume, matching_volume);
             any_match = true;
 
-            // Execute trade
-            int old_matching_volume = matching_order->get_volume();
-            int new_matching_volume = old_matching_volume - trade_volume;
-            int new_order_volume = order->get_volume() - trade_volume;
+            int new_matching_volume = matching_volume - trade_volume;
+            int new_order_volume = remaining_order_volume - trade_volume;
 
-            // Create trade info (before modifying volumes)
             TradeInfo trade;
             trade.order_id = order->get_order_id();
             trade.client_name = order->get_client();
@@ -206,105 +209,31 @@ OrderResult Orderbook::match_against_asks(Order* order, std::vector<TradeInfo>& 
             trade.counterparty = matching_order->get_client();
             trades.push_back(trade);
 
-            // Get next order before potentially removing current one
             Order* next_matching = matching_order->next;
 
-            // Update volumes and handle order lifecycle
             if (new_matching_volume > 0) {
-                // Partially filled - update volume
                 matching_order->set_volume(new_matching_volume);
-                best_ask->update_volume(matching_order, old_matching_volume);
+                best_level->update_volume(matching_order, matching_volume);
             } else {
-                // Fully filled - remove before modifying volume
                 int matching_id = matching_order->get_order_id();
-                best_ask->remove_order(matching_order);
+                best_level->remove_order(matching_order);
                 order_map_.erase(matching_id);
                 order_pool_.deallocate(matching_order);
             }
 
             order->set_volume(new_order_volume);
-            
-            matching_order = next_matching;
-        }
-        
-        // If price level is empty, remove it
-        if (best_ask->get_order_count() == 0) {
-            PriceLevel* level_to_remove = best_ask;
-            ask_levels_.remove_level(level_to_remove);
-            level_pool_.deallocate(level_to_remove);
-        }
-    }
-    
-    if (order->get_volume() == 0) {
-        return OrderResult::COMPLETE_FILL;
-    } else if (any_match) {
-        return OrderResult::PARTIAL_FILL;
-    } else {
-        return OrderResult::SUCCESS;  // No matches, but order added to book
-    }
-}
-
-OrderResult Orderbook::match_against_bids(Order* order, std::vector<TradeInfo>& trades) {
-    bool any_match = false;
-
-    while (order->get_volume() > 0 && !bid_levels_.empty()) {
-        PriceLevel* best_bid = bid_levels_.get_best_level();
-        
-        // Check if price matches
-        if (best_bid->get_price() < order->get_price()) {
-            break; // No more matching
-        }
-        
-        // Match against orders at this level
-        Order* matching_order = best_bid->head;
-        
-        while (matching_order && order->get_volume() > 0) {
-            int trade_volume = std::min(order->get_volume(), matching_order->get_volume());
-
-            // Execute trade
-            int old_matching_volume = matching_order->get_volume();
-            int new_matching_volume = old_matching_volume - trade_volume;
-            int new_order_volume = order->get_volume() - trade_volume;
-
-            // Create trade info (before modifying volumes)
-            TradeInfo trade;
-            trade.order_id = order->get_order_id();
-            trade.client_name = order->get_client();
-            trade.price = matching_order->get_price();
-            trade.volume = trade_volume;
-            trade.is_buy = (order->get_side() == Side::BUY);
-            trade.counterparty = matching_order->get_client();
-            trades.push_back(trade);
-
-            // Get next order before potentially removing current one
-            Order* next_matching = matching_order->next;
-
-            // Update volumes and handle order lifecycle
-            if (new_matching_volume > 0) {
-                // Partially filled - update volume
-                matching_order->set_volume(new_matching_volume);
-                best_bid->update_volume(matching_order, old_matching_volume);
-            } else {
-                // Fully filled - remove before modifying volume
-                int matching_id = matching_order->get_order_id();
-                best_bid->remove_order(matching_order);
-                order_map_.erase(matching_id);
-                order_pool_.deallocate(matching_order);
-            }
-
-            order->set_volume(new_order_volume);
+            remaining_order_volume = new_order_volume;
 
             matching_order = next_matching;
         }
-        
-        // If price level is empty, remove it
-        if (best_bid->get_order_count() == 0) {
-            PriceLevel* level_to_remove = best_bid;
-            bid_levels_.remove_level(level_to_remove);
+
+        if (best_level->get_order_count() == 0) {
+            PriceLevel* level_to_remove = best_level;
+            levels.remove_level(level_to_remove);
             level_pool_.deallocate(level_to_remove);
         }
     }
-    
+
     if (order->get_volume() == 0) {
         return OrderResult::COMPLETE_FILL;
     } else if (any_match) {
@@ -314,21 +243,19 @@ OrderResult Orderbook::match_against_bids(Order* order, std::vector<TradeInfo>& 
     }
 }
 
+OrderResult Orderbook::match_against_asks(Order* order, std::vector<TradeInfo>& trades) {
+    return match_orders(order, trades, ask_levels_, true);
+}
+
+OrderResult Orderbook::match_against_bids(Order* order, std::vector<TradeInfo>& trades) {
+    return match_orders(order, trades, bid_levels_, false);
+}
+
 void Orderbook::add_order_to_book(Order* order) {
     Price price = order->get_price();
-    PriceLevel* level = nullptr;
-    
-    if (order->get_side() == Side::BUY) {
-        level = bid_levels_.find_level(price);
-        if (!level) {
-            level = bid_levels_.create_level(price);
-        }
-    } else {
-        level = ask_levels_.find_level(price);
-        if (!level) {
-            level = ask_levels_.create_level(price);
-        }
-    }
+    PriceLevel* level = (order->get_side() == Side::BUY)
+        ? bid_levels_.find_or_create_level(price)
+        : ask_levels_.find_or_create_level(price);
     
     level->add_order(order);
 }
@@ -434,6 +361,15 @@ size_t Orderbook::price_level_count() const {
     return count;
 }
 
+void Orderbook::reserve_orders(size_t live_orders) {
+    order_pool_.reserve(live_orders);
+    order_map_.reserve(live_orders);
+}
+
+void Orderbook::reserve_price_levels(size_t total_levels) {
+    level_pool_.reserve(total_levels);
+}
+
 void Orderbook::print_book() const {
     std::cout << "--------- ORDER BOOK ---------" << std::endl;
     std::cout << "ASKS:" << std::endl;
@@ -490,4 +426,3 @@ bool Orderbook::has_duplicate_id(const Order& order) const {
 }
 
 }
-

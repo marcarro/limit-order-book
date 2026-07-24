@@ -1,8 +1,9 @@
 #pragma once
 #include <array>
 #include <cassert>
-#include <vector>
 #include <cstddef>
+#include <memory>
+#include <vector>
 
 namespace trading {
 namespace memory {
@@ -111,6 +112,14 @@ public:
         );
     }
 
+    void reserve(size_t total_objects) {
+        while (total_capacity() < total_objects) {
+            blocks_.push_back(
+                std::make_unique<FixedMemoryBlock<T, BlockSize>>()
+            );
+        }
+    }
+
     T* allocate() {
         // try to allocate from existing blocks
         for (auto& block : blocks_) {
@@ -151,6 +160,10 @@ public:
             total += block->used();
         }
         return total;
+    }
+
+    size_t block_count() const {
+        return blocks_.size();
     }
 };
 

@@ -2,7 +2,7 @@
 #include "Order.h"
 #include "../common/FixedPoint.h"
 #include "../common/MemoryPool.h"
-#include <unordered_map>
+#include <map>
 
 namespace trading {
 
@@ -41,26 +41,28 @@ private:
     PriceLevel* head_ = nullptr;
     PriceLevel* tail_ = nullptr;
     bool is_bid_side_;
-	memory::MemoryPool<PriceLevel>& pool_;
-    
+	memory::MemoryPool<PriceLevel>* pool_;
+
     // fast lookup by price
-    std::unordered_map<Price, PriceLevel*, std::hash<Price>> price_map_;
+    std::map<Price, PriceLevel*> price_map_;
 
 public:
 	explicit PriceLevelList(bool is_bid_side, memory::MemoryPool<PriceLevel>& pool)
-        : head_(nullptr), tail_(nullptr), is_bid_side_(is_bid_side), pool_(pool) {}
+        : head_(nullptr), tail_(nullptr), is_bid_side_(is_bid_side), pool_(&pool) {}
 
     
     PriceLevel* find_level(const Price& price) const;
-    PriceLevel* create_level(const Price& price);
+    PriceLevel* find_or_create_level(const Price& price);
     void remove_level(PriceLevel* level);
-    
+
     PriceLevel* get_best_level() const;
     bool empty() const;
-    
+
     // iterate through price levels
     PriceLevel* begin() const;
     PriceLevel* next(PriceLevel* current) const;
+
+    void set_pool(memory::MemoryPool<PriceLevel>& pool) { pool_ = &pool; }
 };
 
 }
