@@ -1,4 +1,3 @@
-#pragma once
 #include "../../include/common/FixedPoint.h"
 #include <stdexcept>
 #include <functional>
@@ -117,4 +116,3 @@ namespace std {
         return hash<int64_t>()(p.raw_value());
     }
 }
-

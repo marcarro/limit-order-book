@@ -14,9 +14,28 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 # Create library target
 add_library(orderbook_lib STATIC ${SOURCES})
 
-# Create executable target
+function(apply_project_warnings target_name)
+    if(MSVC)
+        target_compile_options(${target_name} PRIVATE /W4)
+    else()
+        target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endfunction()
+
+function(apply_release_flags target_name)
+    if(NOT MSVC)
+        target_compile_options(${target_name} PRIVATE
+            $<$<CONFIG:Release>:-O3 -march=native>
+        )
+    endif()
+endfunction()
+
+# Create executables
 add_executable(orderbook main.cpp)
 target_link_libraries(orderbook orderbook_lib)
+
+add_executable(orderbook_bench bench/orderbook_bench.cpp)
+target_link_libraries(orderbook_bench orderbook_lib)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -31,17 +50,16 @@ enable_testing()
 add_subdirectory(tests)
 
 
-# Compiler warnings and optimization
-if(MSVC)
-    target_compile_options(orderbook_lib PRIVATE /W4)
-    target_compile_options(orderbook PRIVATE /W4)
-else()
-    target_compile_options(orderbook_lib PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(orderbook PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+apply_project_warnings(orderbook_lib)
+apply_project_warnings(orderbook)
+apply_project_warnings(orderbook_bench)
+apply_release_flags(orderbook_lib)
+apply_release_flags(orderbook)
+apply_release_flags(orderbook_bench)
 
 # Install targets
 install(TARGETS orderbook DESTINATION bin)
+install(TARGETS orderbook_bench DESTINATION bin)
 install(TARGETS orderbook_lib DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include)
 
